@@ -1,11 +1,25 @@
-<script setup lang="ts"></script>
+﻿<script setup lang="ts">
+import BasicLayout from '@/layouts/BasicLayout.vue'
+import type { MenuItem } from '@/components/GlobalHeader.vue'
+
+const menuItems: MenuItem[] = [
+  { key: 'home', label: '首页', path: '/' },
+  { key: 'products', label: '产品', path: '/products' },
+  { key: 'about', label: '关于我们', path: '/about' },
+]
+
+const footerLinks = [
+  { label: '关于我们', url: '/about' },
+  { label: '隐私政策', url: '/privacy' },
+  { label: '服务条款', url: '/terms' },
+]
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <BasicLayout
+    siteTitle="NoCodeApp"
+    :menuItems="menuItems"
+    :footerLinks="footerLinks"
+    logoUrl="/favicon.ico"
+  />
 </template>
-
-<style scoped></style>r
