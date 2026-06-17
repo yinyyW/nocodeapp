@@ -30,7 +30,10 @@ const route = useRoute()
 const mobileMenuOpen = ref(false)
 
 const selectedKeys = computed<string[]>(() => {
-  const selected = props.menuItems.find((item) => item.path && route.path.startsWith(item.path))
+  const sorted = [...props.menuItems]
+    .filter((item) => item.path)
+    .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0))
+  const selected = sorted.find((item) => item.path && route.path.startsWith(item.path))
   return selected ? [selected.key] : []
 })
 
@@ -52,24 +55,14 @@ const handleMenuClick: MenuProps['onClick'] = (info) => {
       <div class="header-left">
         <MenuOutlined class="mobile-menu-trigger" @click="mobileMenuOpen = true" />
         <div class="logo-area" @click="router.push('/')">
-          <img
-            v-if="logoUrl"
-            :src="logoUrl"
-            alt="logo"
-            class="logo-img"
-          />
+          <img v-if="logoUrl" :src="logoUrl" alt="logo" class="logo-img" />
           <span class="site-title">{{ siteTitle }}</span>
         </div>
       </div>
 
       <div class="header-center">
-        <a-menu
-          v-model:selectedKeys="selectedKeys"
-          mode="horizontal"
-          :items="menuItems"
-          @click="handleMenuClick"
-          class="header-menu"
-        />
+        <a-menu v-model:selectedKeys="selectedKeys" mode="horizontal" :items="menuItems" @click="handleMenuClick"
+          class="header-menu" />
       </div>
 
       <div class="header-right">
@@ -77,18 +70,8 @@ const handleMenuClick: MenuProps['onClick'] = (info) => {
       </div>
     </div>
 
-    <a-drawer
-      v-model:open="mobileMenuOpen"
-      placement="left"
-      title="菜单"
-      :closable="true"
-    >
-      <a-menu
-        mode="inline"
-        :items="menuItems"
-        @click="handleMenuClick"
-        class="mobile-drawer-menu"
-      />
+    <a-drawer v-model:open="mobileMenuOpen" placement="left" title="菜单" :closable="true">
+      <a-menu mode="inline" :items="menuItems" @click="handleMenuClick" class="mobile-drawer-menu" />
     </a-drawer>
   </header>
 </template>
@@ -173,6 +156,18 @@ const handleMenuClick: MenuProps['onClick'] = (info) => {
   border-radius: 6px;
 }
 
+.header-menu :deep(.ant-menu-item)::after {
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  transition: all 0.3s ease;
+  width: 0;
+}
+
+.header-menu :deep(.ant-menu-item-selected)::after {
+  width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .header-center {
@@ -185,6 +180,7 @@ const handleMenuClick: MenuProps['onClick'] = (info) => {
 
   .header-inner {
     padding: 0 16px;
+    justify-content: space-between;
   }
 }
 </style>

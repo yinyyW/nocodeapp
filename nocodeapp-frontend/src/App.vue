@@ -1,6 +1,11 @@
 ﻿<script setup lang="ts">
 import BasicLayout from '@/layouts/BasicLayout.vue'
 import type { MenuItem } from '@/components/GlobalHeader.vue'
+import {healthCheck} from "@/api/healthController.ts";
+
+healthCheck().then((res) => {
+  console.log(res)
+})
 
 const menuItems: MenuItem[] = [
   { key: 'home', label: '首页', path: '/' },

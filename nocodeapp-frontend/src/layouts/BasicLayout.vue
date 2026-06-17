@@ -16,16 +16,18 @@ withDefaults(defineProps<{
   copyright: 'Copyright &copy; 2026 NoCodeApp. All rights reserved.',
   footerLinks: () => [],
 })
+
+const handleHeaderMenuClick = (menuItem: MenuItem) => {
+  console.log("Basic Layout HandleHeaderMenuClick", menuItem.key)
+}
+
 </script>
 
 <template>
   <a-layout class="basic-layout">
     <a-layout-header class="layout-header">
-      <GlobalHeader
-        :menuItems="menuItems"
-        :siteTitle="siteTitle"
-        :logoUrl="logoUrl"
-      />
+      <GlobalHeader :menuItems="menuItems" :siteTitle="siteTitle" :logoUrl="logoUrl"
+        @menuClick="handleHeaderMenuClick" />
     </a-layout-header>
 
     <a-layout-content class="layout-content">
@@ -35,10 +37,7 @@ withDefaults(defineProps<{
     </a-layout-content>
 
     <a-layout-footer class="layout-footer">
-      <GlobalFooter
-        :copyright="copyright"
-        :links="footerLinks"
-      />
+      <GlobalFooter :copyright="copyright" :links="footerLinks" />
     </a-layout-footer>
   </a-layout>
 </template>
