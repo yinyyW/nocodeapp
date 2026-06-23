@@ -1,4 +1,4 @@
-package com.ai.nocodeapp.common;
+package com.ai.nocodeapp.common.network;
 
 import lombok.Data;
 

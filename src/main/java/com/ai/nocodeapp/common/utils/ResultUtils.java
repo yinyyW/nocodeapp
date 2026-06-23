@@ -1,4 +1,5 @@
-package com.ai.nocodeapp.common;
+package com.ai.nocodeapp.common.utils;
+import com.ai.nocodeapp.common.network.BaseResponse;
 import com.ai.nocodeapp.exception.ErrorCode;
 
 /**

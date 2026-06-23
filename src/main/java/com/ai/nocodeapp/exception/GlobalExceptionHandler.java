@@ -1,7 +1,7 @@
 package com.ai.nocodeapp.exception;
 
-import com.ai.nocodeapp.common.BaseResponse;
-import com.ai.nocodeapp.common.ResultUtils;
+import com.ai.nocodeapp.common.network.BaseResponse;
+import com.ai.nocodeapp.common.utils.ResultUtils;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
