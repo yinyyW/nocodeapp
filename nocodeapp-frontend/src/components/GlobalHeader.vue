@@ -1,52 +1,72 @@
 ﻿<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { MenuOutlined } from '@ant-design/icons-vue'
-import type { MenuProps } from 'ant-design-vue'
+import { ref, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { MenuOutlined } from "@ant-design/icons-vue";
+import { message, type MenuProps } from "ant-design-vue";
+import { useLoginUserStore } from "@/stores/loginUser";
+import { logout } from "@/api/userController";
 
 export interface MenuItem {
-  key: string
-  label: string
-  path?: string
-  children?: MenuItem[]
+  key: string;
+  label: string;
+  routeName: string;
+  path?: string;
+  children?: MenuItem[];
 }
 
-const props = withDefaults(defineProps<{
-  menuItems?: MenuItem[]
-  siteTitle?: string
-  logoUrl?: string
-}>(), {
-  menuItems: () => [],
-  siteTitle: 'NoCodeApp',
-  logoUrl: '',
-})
+const props = withDefaults(
+  defineProps<{
+    menuItems?: MenuItem[];
+    siteTitle?: string;
+    logoUrl?: string;
+  }>(),
+  {
+    menuItems: () => [],
+    siteTitle: "NoCodeApp",
+    logoUrl: "",
+  },
+);
 
 const emit = defineEmits<{
-  (e: 'menuClick', item: MenuItem): void
-}>()
+  (e: "menuClick", item: MenuItem): void;
+}>();
 
-const router = useRouter()
-const route = useRoute()
-const mobileMenuOpen = ref(false)
+const router = useRouter();
+const route = useRoute();
+const mobileMenuOpen = ref(false);
+const loginStore = useLoginUserStore();
 
 const selectedKeys = computed<string[]>(() => {
   const sorted = [...props.menuItems]
     .filter((item) => item.path)
-    .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0))
-  const selected = sorted.find((item) => item.path && route.path.startsWith(item.path))
-  return selected ? [selected.key] : []
-})
+    .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0));
+  const selected = sorted.find(
+    (item) => item.path && route.path.startsWith(item.path),
+  );
+  return selected ? [selected.key] : [];
+});
 
-const handleMenuClick: MenuProps['onClick'] = (info) => {
-  const item = props.menuItems.find((i) => i.key === info.key)
+const handleMenuClick: MenuProps["onClick"] = (info) => {
+  const item = props.menuItems.find((i) => i.key === info.key);
   if (item?.path) {
-    router.push(item.path)
+    router.push(item.path);
   }
   if (item) {
-    emit('menuClick', item)
+    emit("menuClick", item);
   }
-  mobileMenuOpen.value = false
-}
+  mobileMenuOpen.value = false;
+};
+
+const handleLogout = async () => {
+  const res = await logout();
+  if (res?.data?.code !== 0 || !res?.data?.data) {
+    message.error("退出登录失败");
+    return;
+  }
+  message.success("退出登录成功");
+  loginStore.userLogout();
+  router.push("/user/login");
+};
 </script>
 
 <template>
@@ -66,7 +86,28 @@ const handleMenuClick: MenuProps['onClick'] = (info) => {
       </div>
 
       <div class="header-right">
-        <a-button type="primary" class="login-btn">登录</a-button>
+        <div v-if="loginStore?.loginUser?.id">
+          <a-dropdown>
+            <a-space>
+              <a-avatar :src="loginStore?.loginUser?.userAvatar" />
+              {{
+                loginStore?.loginUser?.userName ??
+                `用户${loginStore?.loginUser?.id}`
+              }}
+            </a-space>
+
+            <template #overlay>
+              <a-menu>
+                <a-menu-item>
+                  <a @click="handleLogout">退出登录</a>
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
+        <div v-else>
+          <a-button type="primary" class="login-btn" href="/user/login">登录</a-button>
+        </div>
       </div>
     </div>
 

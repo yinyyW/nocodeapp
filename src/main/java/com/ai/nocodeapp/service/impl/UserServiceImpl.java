@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -136,7 +137,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 PasswordEncoderUtils.encryptPassword(defaultPassword);
         newUser.setUserPassword(encryptPassword);
 
-        // 2. 保存至数据库
+        // 2. 如果前端未传入userAccount，自动生成
+        if (newUser.getUserAccount() == null) {
+            String uuid = UUID.randomUUID().toString().replace("-", "");
+            newUser.setUserAccount("user_" + uuid.substring(0, 8));
+        }
+
+        // 3. 保存至数据库
         boolean result = this.save(newUser);
         if (!result) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR);
@@ -145,7 +152,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public List<User> queryUsers(UserQueryRequest userQueryRequest) {
+    public Page<User> queryUsers(UserQueryRequest userQueryRequest) {
         // 1. 创建QueryWrapper
         Long id = userQueryRequest.getId();
         String userName = userQueryRequest.getUserName();
@@ -166,8 +173,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 2. 分页查询
         int pageNum = userQueryRequest.getPageNum();
         int pageSize = userQueryRequest.getPageSize();
-        Page<User> userPage = page(Page.of(pageNum, pageSize), queryWrapper);
-        return userPage.getRecords();
+        return page(Page.of(pageNum, pageSize), queryWrapper);
     }
 
 }

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.service.UserService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.ai.nocodeapp.constants.UserConstant.ADMIN_ROLE;
@@ -26,6 +25,7 @@ import static com.ai.nocodeapp.constants.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户 控制层�? *
+ *
  * @author <a href="https://github.com/yinyyW">yinyyW</a>
  */
 @RestController
@@ -103,7 +103,8 @@ public class UserController {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
 
-        // 2.从数据库中获取用户信�?        userInfo = userService.userInfo(userInfo.getId());
+        // 2.从数据库中获取用户信息
+        userInfo = userService.userInfo(userInfo.getId());
 
         // 3.用户信息脱敏
         UserLoginResponse userLoginResponse = new UserLoginResponse();
@@ -131,7 +132,8 @@ public class UserController {
     }
 
     /**
-     * 管理员添加用�?     *
+     * 管理员添加用户
+     *
      * @param userAddRequest
      * @return
      */
@@ -209,7 +211,7 @@ public class UserController {
     }
 
     /**
-     * 管理员更新用户信�?     *
+     * 管理员更新用户信息
      * @param userUpdateRequest
      * @return
      */
@@ -224,7 +226,8 @@ public class UserController {
     }
 
     /**
-     * 管理员查询用户列�?     *
+     * 管理员查询用户列表
+     *
      * @param userQueryRequest
      * @return
      */
@@ -235,12 +238,13 @@ public class UserController {
         ThrowUtils.throwIf(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
 
         // 2.查询数据
-        List<User> users = userService.queryUsers(userQueryRequest);
+        Page<User> users = userService.queryUsers(userQueryRequest);
 
         // 3.数据脱敏
         Page<UserVO> userVOPage = new Page<>(userQueryRequest.getPageNum(),
-                userQueryRequest.getPageSize(), users.size());
-        List<UserVO> userVOList = userService.convertToUserVOList(users);
+                userQueryRequest.getPageSize(), users.getTotalRow());
+        List<UserVO> userVOList =
+                userService.convertToUserVOList(users.getRecords());
         userVOPage.setRecords(userVOList);
         return ResultUtils.success(userVOPage);
     }

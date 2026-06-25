@@ -1,12 +1,14 @@
 ﻿<script setup lang="ts">
-
-withDefaults(defineProps<{
-  copyright?: string
-  links?: Array<{ label: string; url: string; icon?: string }>
-}>(), {
-  copyright: 'Copyright &copy; 2026 NoCodeApp. All rights reserved.',
-  links: () => [],
-})
+withDefaults(
+  defineProps<{
+    copyright?: string;
+    links?: Array<{ label: string; url: string; icon?: string }>;
+  }>(),
+  {
+    copyright: "Copyright &copy; 2026 NoCodeApp. All rights reserved.",
+    links: () => [],
+  },
+);
 </script>
 
 <template>

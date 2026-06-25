@@ -1,45 +1,54 @@
 ﻿<script setup lang="ts">
-import type { MenuItem } from '@/components/GlobalHeader.vue'
-import GlobalHeader from '@/components/GlobalHeader.vue'
-import GlobalFooter from '@/components/GlobalFooter.vue'
+import { useRoute } from "vue-router";
+import type { MenuItem } from "@/components/GlobalHeader.vue";
+import GlobalHeader from "@/components/GlobalHeader.vue";
+import GlobalFooter from "@/components/GlobalFooter.vue";
 
-withDefaults(defineProps<{
-  menuItems?: MenuItem[]
-  siteTitle?: string
-  logoUrl?: string
-  copyright?: string
-  footerLinks?: Array<{ label: string; url: string; icon?: string }>
-}>(), {
-  menuItems: () => [],
-  siteTitle: 'NoCodeApp',
-  logoUrl: '',
-  copyright: 'Copyright &copy; 2026 NoCodeApp. All rights reserved.',
-  footerLinks: () => [],
-})
+const route = useRoute();
 
-const handleHeaderMenuClick = (menuItem: MenuItem) => {
-  console.log("Basic Layout HandleHeaderMenuClick", menuItem.key)
-}
-
+withDefaults(
+  defineProps<{
+    menuItems?: MenuItem[];
+    siteTitle?: string;
+    logoUrl?: string;
+    copyright?: string;
+    footerLinks?: Array<{ label: string; url: string; icon?: string }>;
+  }>(),
+  {
+    menuItems: () => [],
+    siteTitle: "NoCodeApp",
+    logoUrl: "",
+    copyright: "Copyright &copy; 2026 NoCodeApp. All rights reserved.",
+    footerLinks: () => [],
+  },
+);
 </script>
 
 <template>
-  <a-layout class="basic-layout">
-    <a-layout-header class="layout-header">
-      <GlobalHeader :menuItems="menuItems" :siteTitle="siteTitle" :logoUrl="logoUrl"
-        @menuClick="handleHeaderMenuClick" />
-    </a-layout-header>
+  <template v-if="route.meta?.fullPage">
+    <router-view />
+  </template>
+  <template v-else>
+    <a-layout class="basic-layout">
+      <a-layout-header class="layout-header">
+        <GlobalHeader
+          :menuItems="menuItems"
+          :siteTitle="siteTitle"
+          :logoUrl="logoUrl"
+        />
+      </a-layout-header>
 
-    <a-layout-content class="layout-content">
-      <div class="content-wrapper">
-        <router-view />
-      </div>
-    </a-layout-content>
+      <a-layout-content class="layout-content">
+        <div class="content-wrapper">
+          <router-view />
+        </div>
+      </a-layout-content>
 
-    <a-layout-footer class="layout-footer">
-      <GlobalFooter :copyright="copyright" :links="footerLinks" />
-    </a-layout-footer>
-  </a-layout>
+      <a-layout-footer class="layout-footer">
+        <GlobalFooter :copyright="copyright" :links="footerLinks" />
+      </a-layout-footer>
+    </a-layout>
+  </template>
 </template>
 
 <style scoped>
@@ -77,7 +86,6 @@ const handleHeaderMenuClick = (menuItem: MenuItem) => {
   background: transparent;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .content-wrapper {
     margin: 16px auto;
