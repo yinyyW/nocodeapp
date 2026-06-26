@@ -7,8 +7,10 @@ import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.util.List;
 
 @SpringBootTest
 public class AiCodeGeneratorTest {
@@ -18,7 +20,7 @@ public class AiCodeGeneratorTest {
 
     @Test
     public void generateHtmlCodeTest() {
-        String userMessage = "任务清单网页，代码不超过100行";
+        String userMessage = "英语学习导航页，代码不超过100行";
         File file = aiCodeGeneratorFacade.generateAndSaveCode(userMessage,
                 CodeGenTypeEnum.HTML);
         Assertions.assertNotNull(file);
@@ -31,4 +33,32 @@ public class AiCodeGeneratorTest {
                 CodeGenTypeEnum.MULTI_FILE);
         Assertions.assertNotNull(file);
     }
+
+    @Test
+    void generateHtmlCodeStreamTest() {
+        Flux<String> codeStream =
+                aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站",
+                        CodeGenTypeEnum.HTML);
+        // 阻塞等待所有数据收集完成
+        List<String> result = codeStream.collectList().block();
+        // 验证结果
+        Assertions.assertNotNull(result);
+        String completeContent = String.join("", result);
+        Assertions.assertNotNull(completeContent);
+    }
+
+
+    @Test
+    void generateMultiFileCodeStreamTest() {
+        Flux<String> codeStream =
+                aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站",
+                        CodeGenTypeEnum.MULTI_FILE);
+        // 阻塞等待所有数据收集完成
+        List<String> result = codeStream.collectList().block();
+        // 验证结果
+        Assertions.assertNotNull(result);
+        String completeContent = String.join("", result);
+        Assertions.assertNotNull(completeContent);
+    }
+
 }
