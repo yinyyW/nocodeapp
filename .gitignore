@@ -33,3 +33,5 @@ build/
 .vscode/
 .codex
 node_modules
+
+/src/main/resources/application-local.yaml
