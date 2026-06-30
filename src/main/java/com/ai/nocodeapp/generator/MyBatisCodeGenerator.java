@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class MyBatisCodeGenerator {
 
-    public static final String[] TABLE_NAMES = {"user"};
+    public static final String[] TABLE_NAMES = {"app"};
 
     public static void main(String[] args) {
         // 获取配置信息
