@@ -1,7 +1,6 @@
 package com.ai.nocodeapp.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.exception.ThrowUtils;
@@ -9,7 +8,7 @@ import com.ai.nocodeapp.mapper.AppMapper;
 import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
-import com.ai.nocodeapp.model.vo.UserVO;
+import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.UserService;

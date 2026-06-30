@@ -1,4 +1,4 @@
-package com.ai.nocodeapp.model.vo;
+package com.ai.nocodeapp.model.vo.user;
 
 import lombok.Data;
 
@@ -7,17 +7,20 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-public class UserVO implements Serializable {
+public class UserLoginResponse implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * id
      */
     private Long id;
-    
+
     /**
      * 账号
      */
     private String userAccount;
+
 
     /**
      * 用户昵称
@@ -40,6 +43,11 @@ public class UserVO implements Serializable {
     private String userRole;
 
     /**
+     * 编辑时间
+     */
+    private LocalDateTime editTime;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
@@ -48,7 +56,4 @@ public class UserVO implements Serializable {
      * 更新时间
      */
     private LocalDateTime updateTime;
-
-    @Serial
-    private static final long serialVersionUID = 1L;
 }

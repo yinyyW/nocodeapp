@@ -1,4 +1,4 @@
-package com.ai.nocodeapp.model.vo;
+package com.ai.nocodeapp.model.vo.user;
 
 import lombok.Data;
 

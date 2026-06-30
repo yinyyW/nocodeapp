@@ -1,4 +1,4 @@
-package com.ai.nocodeapp.model.dto;
+package com.ai.nocodeapp.model.dto.user;
 
 import lombok.Data;
 

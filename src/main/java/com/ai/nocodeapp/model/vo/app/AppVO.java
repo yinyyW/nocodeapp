@@ -1,6 +1,6 @@
 package com.ai.nocodeapp.model.vo.app;
 
-import com.ai.nocodeapp.model.vo.UserVO;
+import com.ai.nocodeapp.model.vo.user.UserVO;
 import lombok.Data;
 
 import java.io.Serial;

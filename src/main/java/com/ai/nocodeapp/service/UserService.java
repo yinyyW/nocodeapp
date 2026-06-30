@@ -1,8 +1,8 @@
 package com.ai.nocodeapp.service;
 
-import com.ai.nocodeapp.model.dto.UserQueryRequest;
+import com.ai.nocodeapp.model.dto.user.UserQueryRequest;
 import com.ai.nocodeapp.model.entity.User;
-import com.ai.nocodeapp.model.vo.UserVO;
+import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
 
