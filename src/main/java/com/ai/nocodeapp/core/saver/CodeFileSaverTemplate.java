@@ -1,10 +1,10 @@
 package com.ai.nocodeapp.core.saver;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
+import com.ai.nocodeapp.exception.ThrowUtils;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -21,11 +21,13 @@ public abstract class CodeFileSaverTemplate<T> {
             "/tmp/output";
 
     /**
+     * @param appId 应用id
      * 创建保存文件的路径: tmp/output/bizType_雪花id
      */
-    protected String getSaveDir() {
+    protected String getSaveDir(Long appId) {
+        ThrowUtils.throwIf(appId == null || appId < 0, ErrorCode.PARAMS_ERROR);
         String dirName = StrUtil.format("{}_{}", getBizType(),
-                IdUtil.getSnowflakeNextIdStr());
+                appId);
         String dirPath = ROOT_DIR + File.separator + dirName;
         FileUtil.mkdir(dirPath);
         return dirPath;
@@ -56,14 +58,15 @@ public abstract class CodeFileSaverTemplate<T> {
 
     /**
      * 保存代码
+     * @param appId 应用id
      * @param result 代码
      * @return 保存至本地文件的目录
      */
-    public final File saveCode(T result) {
+    public final File saveCode(Long appId, T result) {
         // 1.校验参数
         validate(result);
         // 2.获取保存路径
-        String saveDir = getSaveDir();
+        String saveDir = getSaveDir(appId);
         // 3.保存文件
         saveFiles(saveDir, result);
         return new File(saveDir);

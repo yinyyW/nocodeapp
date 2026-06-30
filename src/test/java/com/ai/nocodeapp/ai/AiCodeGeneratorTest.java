@@ -21,7 +21,7 @@ public class AiCodeGeneratorTest {
     @Test
     public void generateHtmlCodeTest() {
         String userMessage = "英语学习导航页，代码不超过100行";
-        File file = aiCodeGeneratorFacade.generateAndSaveCode(userMessage,
+        File file = aiCodeGeneratorFacade.generateAndSaveCode(1L, userMessage,
                 CodeGenTypeEnum.HTML);
         Assertions.assertNotNull(file);
     }
@@ -29,7 +29,7 @@ public class AiCodeGeneratorTest {
     @Test
     public void generateMultifileCodeTest() {
         String userMessage = "任务清单网页，代码不超过100行";
-        File file = aiCodeGeneratorFacade.generateAndSaveCode(userMessage,
+        File file = aiCodeGeneratorFacade.generateAndSaveCode(1L, userMessage,
                 CodeGenTypeEnum.MULTI_FILE);
         Assertions.assertNotNull(file);
     }
@@ -37,7 +37,7 @@ public class AiCodeGeneratorTest {
     @Test
     void generateHtmlCodeStreamTest() {
         Flux<String> codeStream =
-                aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站",
+                aiCodeGeneratorFacade.generateAndSaveCodeStream(1L, "任务记录网站",
                         CodeGenTypeEnum.HTML);
         // 阻塞等待所有数据收集完成
         List<String> result = codeStream.collectList().block();
@@ -51,7 +51,7 @@ public class AiCodeGeneratorTest {
     @Test
     void generateMultiFileCodeStreamTest() {
         Flux<String> codeStream =
-                aiCodeGeneratorFacade.generateAndSaveCodeStream("任务记录网站",
+                aiCodeGeneratorFacade.generateAndSaveCodeStream(1L, "任务记录网站",
                         CodeGenTypeEnum.MULTI_FILE);
         // 阻塞等待所有数据收集完成
         List<String> result = codeStream.collectList().block();

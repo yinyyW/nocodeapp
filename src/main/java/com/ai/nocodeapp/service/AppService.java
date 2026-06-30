@@ -2,9 +2,11 @@ package com.ai.nocodeapp.service;
 
 import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
+import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -38,4 +40,13 @@ public interface AppService extends IService<App> {
      * @return AppVO列表
      */
     List<AppVO> getAppVOList(List<App> apps);
+
+    /**
+     * 根据用户消息生成应用
+     * @param appId 应用id
+     * @param userMessage 用户消息
+     * @param user 用户信息
+     * @return 流式输出
+     */
+    Flux<String> chatToGenCode(Long appId, String userMessage, User user);
 }

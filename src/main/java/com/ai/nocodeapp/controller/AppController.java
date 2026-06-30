@@ -1,5 +1,7 @@
 package com.ai.nocodeapp.controller;
 
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.ai.nocodeapp.annotation.AuthCheck;
 import com.ai.nocodeapp.common.network.BaseResponse;
 import com.ai.nocodeapp.common.utils.ResultUtils;
@@ -20,10 +22,15 @@ import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.BeanUtils;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static com.ai.nocodeapp.constants.UserConstant.USER_LOGIN_STATE;
 
@@ -183,7 +190,8 @@ public class AppController {
         appQueryRequest.setPriority(AppConstant.GOOD_APP_PRIORITY);
         QueryWrapper queryWrapper = appService.getQueryWrapper(appQueryRequest);
         // 分页查询
-        Page<App> appPage = appService.page(Page.of(pageNum, pageSize), queryWrapper);
+        Page<App> appPage = appService.page(Page.of(pageNum, pageSize),
+                queryWrapper);
         // 数据封装
         Page<AppVO> appVOPage = new Page<>(pageNum, pageSize,
                 appPage.getTotalRow());
@@ -275,6 +283,46 @@ public class AppController {
         AppVO appVO = new AppVO();
         BeanUtils.copyProperties(app, appVO);
         return ResultUtils.success(appVO);
+    }
+
+    /**
+     * 根据用户消息生成应用
+     *
+     * @param appId       应用id
+     * @param userMessage 用户消息
+     * @param httpSession httpSession
+     * @return 流式输出
+     */
+    @GetMapping(value = "/chat/gen/code", produces =
+            MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
+                                                       @RequestParam String userMessage,
+                                                       HttpSession httpSession) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appId == null || appId <= 0,
+                ErrorCode.PARAMS_ERROR, "应用id为空");
+        ThrowUtils.throwIf(StrUtil.isBlank(userMessage),
+                ErrorCode.PARAMS_ERROR, "用户消息为空");
+        // 2. 获取登录用户
+        Object userObj = httpSession.getAttribute(USER_LOGIN_STATE);
+        User userInfo = (User) userObj;
+        if (userInfo == null || userInfo.getId() == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        // 3. 生成代码
+        return appService.chatToGenCode(appId, userMessage, userInfo)
+                .map(chunk -> {
+                    // 封装为json对象
+                    Map<String, String> data = Map.of("d", chunk);
+                    String jsonData = JSONUtil.toJsonStr(data);
+                    return ServerSentEvent.<String>builder()
+                            .data(jsonData)
+                            .build();
+                })
+                .concatWith(Mono.just(ServerSentEvent.<String>builder()
+                        .event("done")
+                        .data("")
+                        .build()));
     }
 
 

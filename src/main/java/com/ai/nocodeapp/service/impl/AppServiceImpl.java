@@ -1,6 +1,8 @@
 package com.ai.nocodeapp.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.exception.ThrowUtils;
@@ -8,14 +10,17 @@ import com.ai.nocodeapp.mapper.AppMapper;
 import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
-import com.ai.nocodeapp.model.vo.user.UserVO;
+import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
 import com.ai.nocodeapp.model.vo.app.AppVO;
+import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +36,11 @@ import java.util.stream.Collectors;
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
+    @Resource
     private final UserService userService;
+
+    @Resource
+    private AiCodeGeneratorFacade aiCodeGeneratorFacade;
 
     public AppServiceImpl(UserService userService) {
         this.userService = userService;
@@ -109,6 +118,32 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             appVO.setUser(userVOMap.get(app.getUserId()));
             return appVO;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public Flux<String> chatToGenCode(Long appId, String userMessage,
+                                      User user) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appId == null || appId <= 0,
+                ErrorCode.PARAMS_ERROR, "应用id为空");
+        ThrowUtils.throwIf(StrUtil.isBlank(userMessage),
+                ErrorCode.PARAMS_ERROR, "用户消息为空");
+        // 2. 获取应用信息
+        App app = getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.PARAMS_ERROR);
+        // 3. 仅本人可生成代码
+        if (!user.getId().equals(app.getUserId())) {
+            ThrowUtils.throwIf(StrUtil.isBlank(userMessage),
+                    ErrorCode.NO_AUTH_ERROR, "仅本人可生成代码");
+        }
+        // 4. 获取生成类型
+        CodeGenTypeEnum codeGenTypeEnum =
+                CodeGenTypeEnum.getEnumByValue(app.getCodeGenType());
+        ThrowUtils.throwIf(codeGenTypeEnum == null, ErrorCode.PARAMS_ERROR,
+                "生成类型为空");
+        // 5. 生成流式输出
+        return aiCodeGeneratorFacade.generateAndSaveCodeStream(appId,
+                userMessage, codeGenTypeEnum);
     }
 
 }
