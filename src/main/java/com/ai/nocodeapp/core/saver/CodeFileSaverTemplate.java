@@ -9,6 +9,8 @@ import com.ai.nocodeapp.exception.ThrowUtils;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 
+import static com.ai.nocodeapp.constants.AppConstant.CODE_OUTPUT_ROOT_DIR;
+
 /**
  * 文件代码保存器 - 模板模式
  */
@@ -17,8 +19,7 @@ public abstract class CodeFileSaverTemplate<T> {
     /**
      * 获取文件保存的根目录
      */
-    private static final String ROOT_DIR = System.getProperty("user.dir") +
-            "/tmp/output";
+    private static final String ROOT_DIR = CODE_OUTPUT_ROOT_DIR;
 
     /**
      * @param appId 应用id

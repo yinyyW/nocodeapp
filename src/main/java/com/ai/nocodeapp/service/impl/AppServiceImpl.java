@@ -1,7 +1,10 @@
 package com.ai.nocodeapp.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.ai.nocodeapp.constants.AppConstant;
 import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
@@ -22,6 +25,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +149,55 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 5. 生成流式输出
         return aiCodeGeneratorFacade.generateAndSaveCodeStream(appId,
                 userMessage, codeGenTypeEnum);
+    }
+
+    @Override
+    public String deployApp(Long appId, User user) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(user == null || user.getId() == null,
+                ErrorCode.NO_AUTH_ERROR);
+
+        // 2. 获取应用信息
+        App app = getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.PARAMS_ERROR);
+
+        // 3. 校验用户权限
+        ThrowUtils.throwIf(!user.getId().equals(app.getUserId()),
+                ErrorCode.NO_AUTH_ERROR, "仅可部署自己的应用");
+
+        // 4. 生成deployKey
+        String deployKey = app.getDeployKey();
+        if (StrUtil.isBlank(deployKey)) {
+            deployKey = RandomUtil.randomString(6);
+        }
+
+        // 5. 移动代码至部署路径
+        try {
+            String codeGenType = app.getCodeGenType();
+            ThrowUtils.throwIf(codeGenType == null, ErrorCode.PARAMS_ERROR,
+                    "应用生成类型为空");
+            String sourcePath =
+                    AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + codeGenType + "_" + appId;
+            String destPath =
+                    AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+            File sourceDir = new File(sourcePath);
+            ThrowUtils.throwIf(!sourceDir.exists() || !sourceDir.isDirectory(), ErrorCode.PARAMS_ERROR, "应用代码不存在");
+            File destDir = new File(destPath);
+            FileUtil.copyContent(sourceDir, destDir, true);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "移动至部署路径失败");
+        }
+        // 6. 更新应用
+        App updateApp = new App();
+        BeanUtils.copyProperties(app, updateApp);
+        updateApp.setDeployKey(deployKey);
+        updateApp.setDeployedTime(LocalDateTime.now());
+        boolean updateResult = updateById(updateApp);
+        ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用失败");
+
+        // 7. 返回部署url
+        return AppConstant.CODE_DEPLOY_HOST + "/" + deployKey;
     }
 
 }

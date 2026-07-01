@@ -325,5 +325,22 @@ public class AppController {
                         .build()));
     }
 
+    /**
+     * 部署应用
+     * @param appDeployRequest 部署应用请求
+     * @param session http session
+     * @return 部署的url
+     */
+    @PostMapping("/deploy")
+    public BaseResponse<String> deployApp(@RequestBody AppDeployRequest appDeployRequest, HttpSession session) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        // 2. 部署应用
+        User userInfo = (User) session.getAttribute(USER_LOGIN_STATE);
+        ThrowUtils.throwIf(userInfo == null, ErrorCode.NOT_LOGIN_ERROR);
+        String url = appService.deployApp(appDeployRequest.getAppId(), userInfo);
+        return ResultUtils.success(url);
+    }
+
 
 }
