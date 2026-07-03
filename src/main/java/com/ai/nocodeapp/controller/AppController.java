@@ -306,10 +306,6 @@ public class AppController {
         // 3. 生成代码
         return appService.chatToGenCode(appId, userMessage, userInfo)
                 .map(chunk -> {
-                    System.out.println(
-                            LocalTime.now() + " -> " + chunk.substring(0, Math.min(chunk.length(), 20))
-                    );
-                    log.info("{} -> {}", LocalTime.now(), chunk);
                     // 封装为json对象
                     Map<String, String> data = Map.of("d", chunk);
                     String jsonData = JSONUtil.toJsonStr(data);
