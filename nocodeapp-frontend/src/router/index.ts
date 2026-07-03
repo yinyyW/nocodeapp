@@ -15,6 +15,7 @@ const router = createRouter({
       component: () => import('@/views/app/AppChatPage.vue'),
       meta: {
         access: ACCESS_ENUM.USER,
+        fullPage: true,
       },
     },
     {

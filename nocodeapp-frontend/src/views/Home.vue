@@ -85,37 +85,35 @@ const fetchGoodApps = async () => {
 }
 
 const handleCreate = async () => {
-  console.log('创建应用')
-  // const initPrompt = prompt.value.trim()
-  // if (!initPrompt) {
-  //   message.warning('请输入你想创建的应用')
-  //   return
-  // }
-  // creating.value = true
-  // try {
-  //   const res = await addApp({ initPrompt })
-  //   if (res?.data?.code === 0 && res.data.data) {
-  //     message.success('应用创建成功')
-  //     router.push(`/app/${res.data.data}/chat`)
-  //   } else {
-  //     message.error(res?.data?.message ?? '创建应用失败')
-  //   }
-  // } catch (e) {
-  //   message.error((e as Error)?.message ?? '网络异常，请稍后重试')
-  // } finally {
-  //   creating.value = false
-  // }
+  const initPrompt = prompt.value.trim()
+  if (!initPrompt) {
+    message.warning('请输入你想创建的应用')
+    return
+  }
+  creating.value = true
+  try {
+    const res = await addApp({ initPrompt })
+    if (res?.data?.code === 0 && res.data.data) {
+      message.success('应用创建成功')
+      router.push(`/app/${res.data.data}/chat`)
+    } else {
+      message.error(res?.data?.message ?? '创建应用失败')
+    }
+  } catch (e) {
+    message.error((e as Error)?.message ?? '网络异常，请稍后重试')
+  } finally {
+    creating.value = false
+  }
 }
 
 const handlePromptShortcut = (value: string) => {
-  prompt.value = `使用 NoCode 创建一个${value}`
+  prompt.value = `创建一个${value}`
 }
 
 const handleOpenApp = (app: API.AppVO) => {
-  console.log(`跳转至应用${app.id}`)
-  // if (app.id) {
-  //   router.push(`/app/${app.id}/chat`)
-  // }
+  if (app.id) {
+    router.push(`/app/${app.id}/chat`)
+  }
 }
 
 onMounted(() => {
