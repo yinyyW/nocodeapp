@@ -14,8 +14,9 @@ import {
   UserOutlined,
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
-import { deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
+import { cancelDeployApp, deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
 import { getCodeGenTypeLabel } from '@/common/codeGenType'
+import MdRenderer from '@/components/MdRenderer.vue'
 
 
 type ChatMessage = {
@@ -208,6 +209,24 @@ const handleDeploy = async () => {
   }
 }
 
+const handleCancelDeploy = async () => {
+  deploying.value = true
+  try {
+    const res = await cancelDeployApp({ appId: appId.value })
+    if (res?.data?.code === 0 && res.data.data) {
+      message.success('取消部署成功')
+      deployUrl.value = ""
+      await refreshApp()
+    } else {
+      message.error(res?.data?.message ?? '取消部署失败')
+    }
+  } catch (e) {
+    message.error((e as Error)?.message ?? '取消部署异常')
+  } finally {
+    deploying.value = false
+  }
+}
+
 const handleSaveName = async () => {
   const name = editForm.appName.trim()
   if (!name) {
@@ -273,7 +292,13 @@ onBeforeUnmount(() => {
           </template>
           应用详情
         </a-button>
-        <a-button type="primary" :loading="deploying" @click="handleDeploy">
+        <a-button v-if="app?.deployKey" type="primary" :loading="deploying" @click="handleCancelDeploy">
+          <template #icon>
+            <CloudUploadOutlined />
+          </template>
+          取消部署
+        </a-button>
+        <a-button v-else type="primary" :loading="deploying" @click="handleDeploy">
           <template #icon>
             <CloudUploadOutlined />
           </template>
@@ -296,7 +321,7 @@ onBeforeUnmount(() => {
               </a-avatar>
               <div class="message-bubble">
                 <a-spin v-if="item.loading && !item.content" size="small" />
-                <p v-else>{{ item.content }}</p>
+                <MdRenderer v-else :content="item.content" />
               </div>
               <a-avatar v-if="item.role === 'user'" class="message-avatar user-avatar">
                 <template #icon>
@@ -372,7 +397,7 @@ onBeforeUnmount(() => {
         <a-descriptions-item label="初始提示词">{{ app?.initPrompt || '-' }}</a-descriptions-item>
         <a-descriptions-item label="生成类型">{{
           getCodeGenTypeLabel(app?.codeGenType)
-        }}</a-descriptions-item>
+          }}</a-descriptions-item>
         <a-descriptions-item label="部署地址">
           <a v-if="deployUrl" :href="deployUrl" target="_blank">{{ deployUrl }}</a>
           <span v-else>{{ app?.deployKey ? `http://localhost/${app.deployKey}` : '未部署' }}</span>
@@ -406,7 +431,8 @@ onBeforeUnmount(() => {
 .app-chat-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f3f6fb;
 }
 
@@ -518,7 +544,6 @@ onBeforeUnmount(() => {
   background: #f8fafc;
   color: #334155;
   line-height: 1.65;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -527,9 +552,6 @@ onBeforeUnmount(() => {
   color: #0f172a;
 }
 
-.message-bubble p {
-  margin: 0;
-}
 
 .composer {
   padding: 10px;

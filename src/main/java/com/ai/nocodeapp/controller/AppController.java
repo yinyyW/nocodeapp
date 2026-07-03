@@ -21,6 +21,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -29,6 +30,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +41,7 @@ import static com.ai.nocodeapp.constants.UserConstant.USER_LOGIN_STATE;
  *
  * @author <a href="https://github.com/yinyyW">yinyyW</a>
  */
+@Slf4j
 @RestController
 @RequestMapping("/app")
 public class AppController {
@@ -88,18 +91,9 @@ public class AppController {
         if (userInfo == null || userInfo.getId() == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        // 3. 获取应用信息
-        App app = appService.getById(appDeleteRequest.getId());
-        ThrowUtils.throwIf(app == null || app.getId() == null,
-                ErrorCode.PARAMS_ERROR);
-        // 4. 仅本人或管理员可删除
-        if (!app.getUserId().equals(userInfo.getId())
-                && !userInfo.getUserRole().equals(UserRoleEnum.ADMIN.getValue())) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-        }
-        // 5. 删除应用
-        boolean result = appService.removeById(appDeleteRequest.getId());
-        ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR);
+        // 3. 删除应用
+        boolean deleteResult = appService.deleteApp(appDeleteRequest.getId(), userInfo);
+        ThrowUtils.throwIf(!deleteResult, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
 
@@ -312,6 +306,10 @@ public class AppController {
         // 3. 生成代码
         return appService.chatToGenCode(appId, userMessage, userInfo)
                 .map(chunk -> {
+                    System.out.println(
+                            LocalTime.now() + " -> " + chunk.substring(0, Math.min(chunk.length(), 20))
+                    );
+                    log.info("{} -> {}", LocalTime.now(), chunk);
                     // 封装为json对象
                     Map<String, String> data = Map.of("d", chunk);
                     String jsonData = JSONUtil.toJsonStr(data);
@@ -342,5 +340,21 @@ public class AppController {
         return ResultUtils.success(url);
     }
 
+    /**
+     * 取消部署应用
+     * @param appDeployRequest 部署应用请求
+     * @param session http session
+     * @return 部署的url
+     */
+    @PostMapping("/deploy/cancel")
+    public BaseResponse<Boolean> cancelDeployApp(@RequestBody AppDeployRequest appDeployRequest, HttpSession session) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appDeployRequest == null, ErrorCode.PARAMS_ERROR);
+        // 2. 取消部署应用
+        User userInfo = (User) session.getAttribute(USER_LOGIN_STATE);
+        ThrowUtils.throwIf(userInfo == null, ErrorCode.NOT_LOGIN_ERROR);
+        appService.cancelDeploy(appDeployRequest.getAppId(), userInfo);
+        return ResultUtils.success(true);
+    }
 
 }

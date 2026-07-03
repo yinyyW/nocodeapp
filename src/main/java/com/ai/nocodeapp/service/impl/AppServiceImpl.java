@@ -14,13 +14,16 @@ import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
+import com.ai.nocodeapp.model.enums.UserRoleEnum;
 import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -38,6 +41,7 @@ import java.util.stream.Collectors;
  *
  * @author <a href="https://github.com/yinyyW">yinyyW</a>
  */
+@Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
@@ -126,6 +130,59 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     }
 
     @Override
+    public Boolean deleteApp(Long id, User user) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(user == null, ErrorCode.PARAMS_ERROR);
+
+        // 2. 获取应用信息
+        App app = getById(id);
+        ThrowUtils.throwIf(app == null || app.getId() == null,
+                ErrorCode.PARAMS_ERROR);
+        String deployKey = app.getDeployKey();
+        String codeGenType = app.getCodeGenType();
+        ThrowUtils.throwIf(codeGenType == null, ErrorCode.PARAMS_ERROR,
+                "生成应用类型为空");
+
+        // 3. 仅本人或管理员可删除
+        if (!app.getUserId().equals(user.getId())
+                && !user.getUserRole().equals(UserRoleEnum.ADMIN.getValue())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+
+        // 4. 删除应用
+        boolean result = removeById(id);
+        ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR);
+
+        // 5. 删除应用部署文件
+        if (!StrUtil.isBlank(deployKey)) {
+            try {
+                String deployPath =
+                        AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+                File deployDir = new File(deployPath);
+                if (deployDir.exists() && deployDir.isDirectory()) {
+                    FileUtil.del(deployDir);
+                }
+            } catch (Exception e) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+            }
+        }
+
+        // 6. 删除应用预览文件
+        try {
+            String previewPath =
+                    AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + codeGenType + "_" + id;
+            File previewDir = new File(previewPath);
+            if (previewDir.exists() && previewDir.isDirectory()) {
+                FileUtil.del(previewDir);
+            }
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR);
+        }
+        return true;
+    }
+
+    @Override
     public Flux<String> chatToGenCode(Long appId, String userMessage,
                                       User user) {
         // 1. 校验参数
@@ -190,7 +247,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         }
         // 6. 更新应用
         App updateApp = new App();
-        BeanUtils.copyProperties(app, updateApp);
+        updateApp.setId(appId);
         updateApp.setDeployKey(deployKey);
         updateApp.setDeployedTime(LocalDateTime.now());
         boolean updateResult = updateById(updateApp);
@@ -198,6 +255,47 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         // 7. 返回部署url
         return AppConstant.CODE_DEPLOY_HOST + "/" + deployKey;
+    }
+
+    @Override
+    public Boolean cancelDeploy(Long appId, User user) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR);
+        App app = getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.PARAMS_ERROR);
+        String deployKey = app.getDeployKey();
+        String codeGenType = app.getCodeGenType();
+        ThrowUtils.throwIf(deployKey == null, ErrorCode.PARAMS_ERROR, "应用未部署");
+        ThrowUtils.throwIf(codeGenType == null, ErrorCode.PARAMS_ERROR,
+                "应用生成类型为空");
+        ThrowUtils.throwIf(!user.getId().equals(app.getUserId()),
+                ErrorCode.NO_AUTH_ERROR);
+
+        // 2. 更新数据库
+        boolean updateResult = UpdateChain.of(App.class)
+                .set(App::getDeployKey, null)
+                .set(App::getDeployedTime, null)
+                .where(App::getId)
+                .eq(appId)
+                .update();
+
+        ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "数据库更新异常");
+
+        // 3. 删除部署文件
+        try {
+            String deployPath =
+                    AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+            File deployDir = new File(deployPath);
+            ThrowUtils.throwIf(!deployDir.exists() || !deployDir.isDirectory(), ErrorCode.PARAMS_ERROR);
+            boolean delResult = FileUtil.del(deployPath);
+            if (!delResult) {
+                log.error("清理部署文件异常");
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+
+        return true;
     }
 
 }

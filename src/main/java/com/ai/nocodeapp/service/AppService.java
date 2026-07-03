@@ -42,6 +42,15 @@ public interface AppService extends IService<App> {
     List<AppVO> getAppVOList(List<App> apps);
 
     /**
+     * 删除应用
+     *
+     * @param id   应用id
+     * @param user 当前操作用户
+     * @return 删除应用结果
+     */
+    Boolean deleteApp(Long id, User user);
+
+    /**
      * 根据用户消息生成应用
      * @param appId 应用id
      * @param userMessage 用户消息
@@ -57,4 +66,12 @@ public interface AppService extends IService<App> {
      * @return 部署的url
      */
     String deployApp(Long appId, User user);
+
+    /**
+     * 取消部署的应用
+     * @param appId 应用id
+     * @param user 用户信息
+     * @return 取消部署结果
+     */
+    Boolean cancelDeploy(Long appId, User user);
 }
