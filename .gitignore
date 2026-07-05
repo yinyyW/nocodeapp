@@ -37,3 +37,5 @@ node_modules
 /src/main/resources/application-local.yaml
 /dev/
 /tmp/
+
+AGENTS.md
