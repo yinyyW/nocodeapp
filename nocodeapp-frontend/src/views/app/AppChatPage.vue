@@ -12,11 +12,14 @@ import {
   SaveOutlined,
   SendOutlined,
   UserOutlined,
+  UpOutlined,
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { cancelDeployApp, deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
 import { getCodeGenTypeLabel } from '@/common/codeGenType'
 import MdRenderer from '@/components/MdRenderer.vue'
+import { listAppChatHistory } from '@/api/chatHistoryController'
+import { useLoginUserStore } from '@/stores/loginUser'
 
 
 type ChatMessage = {
@@ -24,12 +27,14 @@ type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
   loading?: boolean
+  createTime?: string
 }
 
 const API_BASE_URL = 'http://localhost:8123/api'
 
 const route = useRoute()
 const router = useRouter()
+const loginStore = useLoginUserStore();
 
 const app = ref<API.AppVO>()
 const loading = ref(false)
@@ -37,9 +42,13 @@ const generating = ref(false)
 const deploying = ref(false)
 const detailOpen = ref(false)
 const savingName = ref(false)
+const hasMoreHistory = ref(false)
+const loadingHistroy = ref(false)
+const isOwner = ref(false)
 const userInput = ref('')
 const deployUrl = ref('')
 const previewReady = ref(false)
+const lastCreateTime = ref<string>()
 const messagesBodyRef = ref<HTMLElement>()
 const eventSourceRef = ref<EventSource | null>(null)
 const messages = ref<ChatMessage[]>([])
@@ -89,6 +98,7 @@ const refreshApp = async () => {
     deployUrl.value = res.data.data.deployKey
       ? `http://localhost/${res.data.data.deployKey}`
       : deployUrl.value
+    isOwner.value = res.data.data.userId === loginStore.loginUser.id
     return res.data.data
   }
   throw new Error(res?.data?.message ?? '获取应用信息失败')
@@ -104,6 +114,56 @@ const finishGenerate = async () => {
   }
   previewReady.value = Boolean(previewUrl.value)
   message.success('网站生成完成')
+}
+
+const loadChatHistory = async (isLoadMore: boolean = false) => {
+  loadingHistroy.value = isLoadMore
+  const params: API.listAppChatHistoryParams = {
+    appId: appId.value,
+    pageSize: 2
+  }
+  if (isLoadMore && lastCreateTime) {
+    params.lastCreateTime = lastCreateTime.value
+  }
+  try {
+    const res = await listAppChatHistory(params)
+    if (!res.data.data || res?.data?.code !== 0) {
+      throw new Error(res?.data?.message ?? '获取会话消息失败')
+    }
+    const chatHistories = res.data.data.records || []
+
+    if (chatHistories.length > 0) {
+      const chatMessages: ChatMessage[] = chatHistories.map(chat => ({
+        id: chat.id || "",
+        role: (chat.messageType === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: chat.message || "",
+        createTime: chat.createTime
+      })).reverse()
+      if (isLoadMore) {
+        // 动态更新scrollTop
+        const el = messagesBodyRef.value
+        const prevScrollHeight = el?.scrollHeight ?? 0
+        console.log(`prev scroll height: ${prevScrollHeight}, scrollTop: ${el?.scrollTop}`)
+        messages.value.unshift(...chatMessages)
+        await nextTick()
+        if (el) {
+          el.scrollTop = el.scrollHeight - prevScrollHeight
+        }
+      } else {
+        messages.value = chatMessages
+        // 已有会话消息自动下拉消息记录至底部
+        scrollToBottom()
+      }
+      lastCreateTime.value = chatHistories[chatHistories.length - 1]?.createTime
+      // 是否有更多的消息数据
+      const totalRows = Number(res.data.data.totalRow) || chatHistories.length
+      hasMoreHistory.value = totalRows > messages.value.length
+    }
+  } catch (e) {
+    message.error((e as Error)?.message ?? '获取会话消息失败')
+  } finally {
+    loadingHistroy.value = false
+  }
 }
 
 const sendMessage = async (content: string, auto = false) => {
@@ -173,11 +233,10 @@ const loadAppAndAutoGenerate = async () => {
   }
   loading.value = true
   try {
-    const data = await refreshApp()
-    const autoKey = `nocodeapp:auto-gen:${appId.value}`
-    if (data.initPrompt && !sessionStorage.getItem(autoKey)) {
-      await sendMessage(data.initPrompt, true)
-    } else if (data.codeGenType) {
+    await Promise.all([loadChatHistory(), refreshApp()])
+    if (app.value?.initPrompt && isOwner.value && !loadingHistroy.value && !messages.value?.length) {
+      await sendMessage(app.value?.initPrompt, true)
+    } else if (app.value?.codeGenType) {
       previewReady.value = true
     }
   } catch (e) {
@@ -310,6 +369,15 @@ onBeforeUnmount(() => {
     <main class="workspace-body">
       <section class="chat-panel">
         <div ref="messagesBodyRef" class="messages-body">
+          <div v-if="hasMoreHistory" class="messages-load-more-container">
+            <div class="load-more-divider">
+              <span class="load-more-line"></span>
+            </div>
+            <span v-if="!loadingHistroy" class="load-more-btn" @click="() => loadChatHistory(true)">
+              <UpOutlined /> 加载更多
+            </span>
+            <a-spin v-else :spinning="loadingHistroy" size="small" />
+          </div>
           <a-spin :spinning="loading">
             <a-empty v-if="!messages.length" description="应用加载后会自动发送初始提示词" />
             <div v-for="item in messages" :key="item.id" class="message-row"
@@ -515,6 +583,52 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
   padding: 14px;
+}
+
+.messages-load-more-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.load-more-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+.load-more-divider span {
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.load-more-btn:hover {
+  border-color: #1677ff;
+  color: #1677ff;
+  background: #f0f5ff;
+}
+
+.load-more-btn:active {
+  transform: scale(0.97);
 }
 
 .message-row {

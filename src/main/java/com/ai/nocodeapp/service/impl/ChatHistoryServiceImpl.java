@@ -85,7 +85,7 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
                 .eq("userId", userId)
                 .eq("appId", appId);
         if (lastCreateTime != null) {
-            queryWrapper.le("last_create_time", lastCreateTime);
+            queryWrapper.lt("createTime", lastCreateTime);
         }
         if (StrUtil.isNotBlank(sortField)) {
             queryWrapper.orderBy(sortField, "ascend".equals(sortOrder));

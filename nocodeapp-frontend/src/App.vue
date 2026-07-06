@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import BasicLayout from '@/layouts/BasicLayout.vue'
 import type { MenuItem } from '@/components/GlobalHeader.vue'
 import { useLoginUserStore } from './stores/loginUser'
@@ -19,6 +19,12 @@ const allMenuItems: MenuItem[] = [
     label: '用户管理',
     routeName: 'adminUserManagePage',
     path: '/admin/userManage',
+  },
+  {
+    key: 'chatManage',
+    label: '对话管理',
+    routeName: 'adminChatManagePage',
+    path: '/admin/chatManage',
   },
 ]
 

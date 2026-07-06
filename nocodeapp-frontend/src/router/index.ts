@@ -1,4 +1,4 @@
-﻿import { ACCESS_ENUM } from '@/access/checkAccess'
+import { ACCESS_ENUM } from '@/access/checkAccess'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -34,6 +34,14 @@ const router = createRouter({
       path: '/admin/userManage',
       name: 'adminUserManagePage',
       component: () => import('@/views/admin/UserManagerPage.vue'),
+      meta: {
+        access: ACCESS_ENUM.ADMIN,
+      },
+    },
+    {
+      path: '/admin/chatManage',
+      name: 'adminChatManagePage',
+      component: () => import('@/views/admin/ChatManagerPage.vue'),
       meta: {
         access: ACCESS_ENUM.ADMIN,
       },
