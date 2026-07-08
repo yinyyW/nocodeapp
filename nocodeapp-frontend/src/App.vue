@@ -1,10 +1,12 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import BasicLayout from '@/layouts/BasicLayout.vue'
 import type { MenuItem } from '@/components/GlobalHeader.vue'
 import { useLoginUserStore } from './stores/loginUser'
 import { computed } from 'vue'
 import router from './router'
 import { checkAccess } from './access/checkAccess'
+
+const loginUserStore = useLoginUserStore()
 
 const allMenuItems: MenuItem[] = [
   { key: 'home', label: '首页', routeName: 'home', path: '/' },
@@ -41,20 +43,17 @@ const menuItems = computed(() => {
       return false
     }
     if (menuItemRoute.meta?.access) {
-      const loginUserStore = useLoginUserStore()
       return checkAccess(loginUserStore.loginUser, menuItemRoute.meta?.access as string)
     }
     return true
   })
   return filteredMenuItems
 })
+
+// 页面初始化时获取当前登录用户信息
+loginUserStore.fetchLoginUser()
 </script>
 
 <template>
-  <BasicLayout
-    siteTitle="NoCodeApp"
-    :menuItems="menuItems"
-    :footerLinks="footerLinks"
-    logoUrl="/favicon.ico"
-  />
+  <BasicLayout siteTitle="NoCodeApp" :menuItems="menuItems" :footerLinks="footerLinks" logoUrl="/favicon.ico" />
 </template>

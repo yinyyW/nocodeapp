@@ -1,7 +1,7 @@
-import router from "@/router"
-import { useLoginUserStore } from "@/stores/loginUser"
-import { USER_ROLE } from "@/common/userRole"
-import { ACCESS_ENUM } from "./checkAccess"
+import router from '@/router'
+import { useLoginUserStore } from '@/stores/loginUser'
+import { USER_ROLE } from '@/common/userRole'
+import { ACCESS_ENUM } from './checkAccess'
 
 router.beforeEach(async (to, from, next) => {
   const needAccess = to?.meta?.access
@@ -11,7 +11,6 @@ router.beforeEach(async (to, from, next) => {
   }
   const loginUserStore = useLoginUserStore()
   if (loginUserStore.fetchUserFlag || !loginUserStore?.loginUser?.id) {
-    // console.log('fetch login user')
     await loginUserStore.fetchLoginUser()
   }
   const user = loginUserStore?.loginUser
@@ -28,4 +27,4 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   next()
-});
+})

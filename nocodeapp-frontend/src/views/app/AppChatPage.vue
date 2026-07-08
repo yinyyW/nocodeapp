@@ -157,7 +157,7 @@ const loadChatHistory = async (isLoadMore: boolean = false) => {
       lastCreateTime.value = chatHistories[chatHistories.length - 1]?.createTime
       // 是否有更多的消息数据
       const totalRows = Number(res.data.data.totalRow) || chatHistories.length
-      hasMoreHistory.value = totalRows > messages.value.length
+      hasMoreHistory.value = totalRows > chatHistories.length
     }
   } catch (e) {
     message.error((e as Error)?.message ?? '获取会话消息失败')
