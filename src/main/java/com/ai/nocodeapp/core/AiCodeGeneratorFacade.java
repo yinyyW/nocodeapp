@@ -1,6 +1,7 @@
 package com.ai.nocodeapp.core;
 
 import com.ai.nocodeapp.ai.AiCodeGeneratorService;
+import com.ai.nocodeapp.ai.AiCodeGeneratorServiceFactory;
 import com.ai.nocodeapp.ai.model.HtmlCodeResult;
 import com.ai.nocodeapp.ai.model.MultiFileCodeResult;
 import com.ai.nocodeapp.core.parser.CodeParserExecutor;
@@ -23,7 +24,7 @@ import java.io.File;
 public class AiCodeGeneratorFacade {
 
     @Resource
-    private AiCodeGeneratorService aiCodeGeneratorService;
+    private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
 
     /**
      * 统一入口：根据类型生成并保存代码
@@ -38,6 +39,8 @@ public class AiCodeGeneratorFacade {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
+        AiCodeGeneratorService aiCodeGeneratorService =
+                aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
         return switch (codeGenTypeEnum) {
             case HTML -> {
                 HtmlCodeResult htmlCodeResult =
@@ -67,11 +70,14 @@ public class AiCodeGeneratorFacade {
      * @param codeGenTypeEnum 生成类型
      * @return 保存的目录
      */
-    public Flux<String> generateAndSaveCodeStream(Long appId, String userMessage,
+    public Flux<String> generateAndSaveCodeStream(Long appId,
+                                                  String userMessage,
                                                   CodeGenTypeEnum codeGenTypeEnum) {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
         }
+        AiCodeGeneratorService aiCodeGeneratorService =
+                aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
         return switch (codeGenTypeEnum) {
             case HTML -> {
                 Flux<String> codeStream =
@@ -113,7 +119,8 @@ public class AiCodeGeneratorFacade {
                                 CodeParserExecutor.executeParser(codeGenTypeEnum, completeMessage);
                         // 保存至本地
                         File saveDir =
-                                CodeFileSaverExecutor.saveCode(appId, codeGenTypeEnum, parseResult);
+                                CodeFileSaverExecutor.saveCode(appId,
+                                        codeGenTypeEnum, parseResult);
                         log.info("流式代码保存成功： {}", saveDir.getAbsolutePath());
                     } catch (BusinessException e) {
                         log.error(e.getMessage());
