@@ -6,6 +6,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.constants.AppConstant;
 import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
+import com.ai.nocodeapp.core.builder.VueProjectBuilder;
 import com.ai.nocodeapp.core.handler.StreamHandlerExecutor;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
@@ -61,6 +62,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     public AppServiceImpl(UserService userService) {
         this.userService = userService;
@@ -258,6 +262,14 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
                     AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
             File sourceDir = new File(sourcePath);
             ThrowUtils.throwIf(!sourceDir.exists() || !sourceDir.isDirectory(), ErrorCode.PARAMS_ERROR, "应用代码不存在");
+            // 处理Vue工程项目文件
+            if (CodeGenTypeEnum.VUE_PROJECT.getValue().equals(codeGenType)) {
+                boolean buildResult = vueProjectBuilder.buildProject(sourcePath);
+                ThrowUtils.throwIf(!buildResult, ErrorCode.SYSTEM_ERROR, "Vue项目构建失败");
+                File distDir = new File(sourceDir, "dist");
+                ThrowUtils.throwIf(!distDir.exists(), ErrorCode.SYSTEM_ERROR, "dist目录不存在");
+                sourceDir = distDir;
+            }
             File destDir = new File(destPath);
             FileUtil.copyContent(sourceDir, destDir, true);
         } catch (Exception e) {

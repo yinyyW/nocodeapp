@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { cancelDeployApp, deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
-import { getCodeGenTypeLabel } from '@/common/codeGenType'
+import { CODE_GEN_TYPE, getCodeGenTypeLabel } from '@/common/codeGenType'
 import MdRenderer from '@/components/MdRenderer.vue'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
@@ -62,6 +62,9 @@ const appName = computed(() => app.value?.appName || `应用 ${appId.value}`)
 const previewUrl = computed(() => {
   if (!app.value?.codeGenType || !appId.value) {
     return ''
+  }
+  if (app.value.codeGenType === CODE_GEN_TYPE.VUE_PROJECT) {
+    return `${API_BASE_URL}/static/${app.value.codeGenType}_${appId.value}/dist/index.html`
   }
   return `${API_BASE_URL}/static/${app.value.codeGenType}_${appId.value}/`
 })
@@ -465,7 +468,7 @@ onBeforeUnmount(() => {
         <a-descriptions-item label="初始提示词">{{ app?.initPrompt || '-' }}</a-descriptions-item>
         <a-descriptions-item label="生成类型">{{
           getCodeGenTypeLabel(app?.codeGenType)
-          }}</a-descriptions-item>
+        }}</a-descriptions-item>
         <a-descriptions-item label="部署地址">
           <a v-if="deployUrl" :href="deployUrl" target="_blank">{{ deployUrl }}</a>
           <span v-else>{{ app?.deployKey ? `http://localhost/${app.deployKey}` : '未部署' }}</span>

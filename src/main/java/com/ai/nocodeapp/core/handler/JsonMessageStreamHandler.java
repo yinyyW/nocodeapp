@@ -5,13 +5,18 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.ai.nocodeapp.ai.model.message.*;
+import com.ai.nocodeapp.constants.AppConstant;
+import com.ai.nocodeapp.core.builder.VueProjectBuilder;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.enums.ChatHistoryMessageTypeEnum;
+import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
 import com.ai.nocodeapp.service.ChatHistoryService;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -22,6 +27,9 @@ import java.util.Set;
 @Slf4j
 @Component
 public class JsonMessageStreamHandler {
+
+    @Resource
+    private VueProjectBuilder vueProjectBuilder;
 
     /**
      * 处理 TokenStream（VUE_PROJECT）
@@ -43,38 +51,52 @@ public class JsonMessageStreamHandler {
         return originFlux
                 .map(chunk -> {
                     // 解析每个 JSON 消息块
-                    return handleJsonMessageChunk(chunk, chatHistoryStringBuilder, seenToolIds);
+                    return handleJsonMessageChunk(chunk,
+                            chatHistoryStringBuilder, seenToolIds);
                 })
                 .filter(StrUtil::isNotEmpty) // 过滤空字串
                 .doOnComplete(() -> {
                     // 流式响应完成后，添加 AI 消息到对话历史
                     String aiResponse = chatHistoryStringBuilder.toString();
-                    chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+                    chatHistoryService.addChatMessage(appId, aiResponse,
+                            ChatHistoryMessageTypeEnum.AI.getValue(),
+                            loginUser.getId());
+                    // 异步构建Vue项目
+                    String projectPath =
+                            AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + CodeGenTypeEnum.VUE_PROJECT.getValue() + "_" + appId;
+                    vueProjectBuilder.buildProjectAsync(projectPath);
                 })
                 .doOnError(error -> {
                     // 如果AI回复失败，也要记录错误消息
                     String errorMessage = "AI回复失败: " + error.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
+                    chatHistoryService.addChatMessage(appId, errorMessage,
+                            ChatHistoryMessageTypeEnum.AI.getValue(),
+                            loginUser.getId());
                 });
     }
 
     /**
      * 解析并收集 TokenStream 数据
      */
-    private String handleJsonMessageChunk(String chunk, StringBuilder chatHistoryStringBuilder, Set<String> seenToolIds) {
+    private String handleJsonMessageChunk(String chunk,
+                                          StringBuilder chatHistoryStringBuilder, Set<String> seenToolIds) {
         // 解析 JSON
-        StreamMessage streamMessage = JSONUtil.toBean(chunk, StreamMessage.class);
-        StreamMessageTypeEnum typeEnum = StreamMessageTypeEnum.getEnumByValue(streamMessage.getType());
+        StreamMessage streamMessage = JSONUtil.toBean(chunk,
+                StreamMessage.class);
+        StreamMessageTypeEnum typeEnum =
+                StreamMessageTypeEnum.getEnumByValue(streamMessage.getType());
         switch (typeEnum) {
             case AI_RESPONSE -> {
-                AiResponseMessage aiMessage = JSONUtil.toBean(chunk, AiResponseMessage.class);
+                AiResponseMessage aiMessage = JSONUtil.toBean(chunk,
+                        AiResponseMessage.class);
                 String data = aiMessage.getData();
                 // 直接拼接响应
                 chatHistoryStringBuilder.append(data);
                 return data;
             }
             case TOOL_REQUEST -> {
-                ToolRequestMessage toolRequestMessage = JSONUtil.toBean(chunk, ToolRequestMessage.class);
+                ToolRequestMessage toolRequestMessage = JSONUtil.toBean(chunk
+                        , ToolRequestMessage.class);
                 String toolId = toolRequestMessage.getId();
                 // 检查是否是第一次看到这个工具 ID
                 if (toolId != null && !seenToolIds.contains(toolId)) {
@@ -87,8 +109,10 @@ public class JsonMessageStreamHandler {
                 }
             }
             case TOOL_EXECUTED -> {
-                ToolExecutedMessage toolExecutedMessage = JSONUtil.toBean(chunk, ToolExecutedMessage.class);
-                JSONObject jsonObject = JSONUtil.parseObj(toolExecutedMessage.getArguments());
+                ToolExecutedMessage toolExecutedMessage =
+                        JSONUtil.toBean(chunk, ToolExecutedMessage.class);
+                JSONObject jsonObject =
+                        JSONUtil.parseObj(toolExecutedMessage.getArguments());
                 String relativeFilePath = jsonObject.getStr("relativePath");
                 String suffix = FileUtil.getSuffix(relativeFilePath);
                 String content = jsonObject.getStr("content");
