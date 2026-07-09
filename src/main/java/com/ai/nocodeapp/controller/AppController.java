@@ -75,7 +75,7 @@ public class AppController {
         app.setUserId(userInfo.getId());
         app.setAppName(app.getInitPrompt().substring(0,
                 Math.min(12, app.getInitPrompt().length())));
-        app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
+        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
         boolean result = appService.save(app);
         ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR);
         return ResultUtils.success(app.getId());

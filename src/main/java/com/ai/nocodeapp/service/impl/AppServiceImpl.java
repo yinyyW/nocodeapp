@@ -6,6 +6,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.constants.AppConstant;
 import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
+import com.ai.nocodeapp.core.handler.StreamHandlerExecutor;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.exception.ThrowUtils;
@@ -54,6 +55,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
 
     @Resource
     private AiCodeGeneratorFacade aiCodeGeneratorFacade;
@@ -217,27 +221,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 6. 生成流式输出，添加AI回复消息
         Flux<String> codeStream =
                 aiCodeGeneratorFacade.generateAndSaveCodeStream(appId,
-                userMessage, codeGenTypeEnum);
-        StringBuilder stringBuilder = new StringBuilder();
-        return codeStream
-                .map(chunk -> {
-                    stringBuilder.append(chunk);
-                    return chunk;
-                })
-                .doOnComplete(() -> {
-                    String message = stringBuilder.toString();
-                    if  (!StrUtil.isBlank(message)) {
-                        chatHistoryService.addChatMessage(appId, message,
-                                ChatHistoryMessageTypeEnum.AI.getValue(),
-                                user.getId());
-                    }
-                })
-                .doOnError(throwable -> {
-                    String errorMessage = "Ai Response Error: " + throwable.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage,
-                            ChatHistoryMessageTypeEnum.AI.getValue(),
-                            user.getId());
-                });
+                        userMessage, codeGenTypeEnum);
+        return streamHandlerExecutor.doExecute(codeStream, chatHistoryService
+                , appId, user, codeGenTypeEnum);
     }
 
     @Override
@@ -338,7 +324,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         // 2. 删除应用关联消息
         try {
-            boolean deleteResult = chatHistoryService.deleteMessageByAppId(appId);
+            boolean deleteResult =
+                    chatHistoryService.deleteMessageByAppId(appId);
             if (!deleteResult) {
                 log.error("删除应用 {} 关联消息失败", appId);
             }
