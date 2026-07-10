@@ -68,6 +68,13 @@ public interface AppService extends IService<App> {
     String deployApp(Long appId, User user);
 
     /**
+     * 异步生成网站截图并上传至COS
+     * @param webUrl 网站URL
+     * @param appId 应用ID
+     */
+    void generateAndUploadScreenshotAsync(String webUrl, Long appId);
+
+    /**
      * 取消部署的应用
      * @param appId 应用id
      * @param user 用户信息

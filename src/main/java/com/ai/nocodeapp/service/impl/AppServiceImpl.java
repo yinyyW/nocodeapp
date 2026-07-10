@@ -22,6 +22,7 @@ import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.ChatHistoryService;
+import com.ai.nocodeapp.service.ScreenshotService;
 import com.ai.nocodeapp.service.UserService;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
@@ -65,6 +66,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private VueProjectBuilder vueProjectBuilder;
+
+    @Resource
+    private ScreenshotService screenshotService;
 
     public AppServiceImpl(UserService userService) {
         this.userService = userService;
@@ -264,10 +268,13 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             ThrowUtils.throwIf(!sourceDir.exists() || !sourceDir.isDirectory(), ErrorCode.PARAMS_ERROR, "应用代码不存在");
             // 处理Vue工程项目文件
             if (CodeGenTypeEnum.VUE_PROJECT.getValue().equals(codeGenType)) {
-                boolean buildResult = vueProjectBuilder.buildProject(sourcePath);
-                ThrowUtils.throwIf(!buildResult, ErrorCode.SYSTEM_ERROR, "Vue项目构建失败");
+                boolean buildResult =
+                        vueProjectBuilder.buildProject(sourcePath);
+                ThrowUtils.throwIf(!buildResult, ErrorCode.SYSTEM_ERROR, "Vue" +
+                        "项目构建失败");
                 File distDir = new File(sourceDir, "dist");
-                ThrowUtils.throwIf(!distDir.exists(), ErrorCode.SYSTEM_ERROR, "dist目录不存在");
+                ThrowUtils.throwIf(!distDir.exists(), ErrorCode.SYSTEM_ERROR,
+                        "dist目录不存在");
                 sourceDir = distDir;
             }
             File destDir = new File(destPath);
@@ -282,9 +289,26 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         updateApp.setDeployedTime(LocalDateTime.now());
         boolean updateResult = updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用失败");
+        // 7. 生成截图封面并保存至COS存储库
+        String appUrl = AppConstant.CODE_DEPLOY_HOST + "/" + deployKey;
+        generateAndUploadScreenshotAsync(appUrl, appId);
+        // 8. 返回部署url
+        return appUrl;
+    }
 
-        // 7. 返回部署url
-        return AppConstant.CODE_DEPLOY_HOST + "/" + deployKey;
+    @Override
+    public void generateAndUploadScreenshotAsync(String webUrl, Long appId) {
+        Thread.startVirtualThread(() -> {
+            // 上传截图
+            String coverUrl =
+                    screenshotService.generateAndUploadScreenshot(webUrl);
+            App updateApp = new App();
+            updateApp.setId(appId);
+            updateApp.setCover(coverUrl);
+            boolean updateResult = updateById(updateApp);
+            ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR,
+                    "更新封面字段失败");
+        });
     }
 
     @Override
