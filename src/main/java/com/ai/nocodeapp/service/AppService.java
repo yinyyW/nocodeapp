@@ -1,11 +1,13 @@
 package com.ai.nocodeapp.service;
 
+import com.ai.nocodeapp.model.dto.app.AppAddRequest;
 import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
+import jakarta.servlet.http.HttpSession;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -81,4 +83,13 @@ public interface AppService extends IService<App> {
      * @return 取消部署结果
      */
     Boolean cancelDeploy(Long appId, User user);
+
+    /**
+     * 添加应用
+     * @param appAddRequest 添加请求
+     * @param user 登录用户
+     * @return 应用id
+     */
+    Long createApp(AppAddRequest appAddRequest
+            , User user);
 }

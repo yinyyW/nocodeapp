@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.ai.nocodeapp.ai.AiCodeGenTypeRoutingService;
 import com.ai.nocodeapp.constants.AppConstant;
 import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
 import com.ai.nocodeapp.core.builder.VueProjectBuilder;
@@ -12,6 +13,7 @@ import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.exception.ThrowUtils;
 import com.ai.nocodeapp.mapper.AppMapper;
+import com.ai.nocodeapp.model.dto.app.AppAddRequest;
 import com.ai.nocodeapp.model.dto.app.AppQueryRequest;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
@@ -29,6 +31,7 @@ import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.javassist.compiler.CodeGen;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -69,6 +72,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
     @Resource
     private ScreenshotService screenshotService;
+
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
 
     public AppServiceImpl(UserService userService) {
         this.userService = userService;
@@ -371,5 +377,33 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         // 3. 删除应用
         return super.removeById(id);
+    }
+
+    @Override
+    public Long createApp(AppAddRequest appAddRequest
+            , User user) {
+        // 1. 校验参数
+        ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(StrUtil.isBlank(appAddRequest.getInitPrompt()),
+                ErrorCode.PARAMS_ERROR, "初始化提示词为空");
+        ThrowUtils.throwIf(user == null || user.getId() == null,
+                ErrorCode.NOT_LOGIN_ERROR);
+
+        // 2. 智能获取代码生成类型
+        CodeGenTypeEnum codeGenTypeEnum =
+                aiCodeGenTypeRoutingService.routeCodeGenType(appAddRequest.getInitPrompt()).getCodeGenerationType();
+        if (codeGenTypeEnum == null) {
+            codeGenTypeEnum = CodeGenTypeEnum.HTML;
+        }
+        // 3. 添加应用
+        App app = new App();
+        BeanUtils.copyProperties(appAddRequest, app);
+        app.setUserId(user.getId());
+        app.setAppName(app.getInitPrompt().substring(0,
+                Math.min(12, app.getInitPrompt().length())));
+        app.setCodeGenType(codeGenTypeEnum.getValue());
+        boolean addResult = save(app);
+        ThrowUtils.throwIf(!addResult, ErrorCode.OPERATION_ERROR, "添加应用失败");
+        return app.getId();
     }
 }

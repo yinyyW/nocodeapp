@@ -13,6 +13,7 @@ import {
   SendOutlined,
   UserOutlined,
   UpOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { cancelDeployApp, deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
@@ -20,6 +21,7 @@ import { CODE_GEN_TYPE, getCodeGenTypeLabel } from '@/common/codeGenType'
 import MdRenderer from '@/components/MdRenderer.vue'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
+import { BASE_URL } from '@/common/network'
 
 
 type ChatMessage = {
@@ -38,6 +40,7 @@ const loginStore = useLoginUserStore();
 
 const app = ref<API.AppVO>()
 const loading = ref(false)
+const downloadLoading = ref(false)
 const generating = ref(false)
 const deploying = ref(false)
 const detailOpen = ref(false)
@@ -325,6 +328,45 @@ const handleDelete = async () => {
   }
 }
 
+const handleDonwloadCode = async () => {
+  if (!appId.value) {
+    message.error("应用ID不存在")
+    return
+  }
+  downloadLoading.value = true
+  try {
+    // 发送请求
+    const url = `${BASE_URL}/app/download/${appId.value}`
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    if (!response.ok) {
+      message.error("下载代码失败")
+      throw new Error("代码文件下载失败")
+    }
+    // 获取文件名
+    const contentDisposition = response.headers.get("Content-Disposition")
+    const matches = contentDisposition?.match(/filename="([^"]+)"/)
+    const fileName = matches ? matches[1] : `${appId.value}_code.zip`
+    // 获取二进制文件
+    const blob = await response.blob()
+    // 下载文件
+    const blobUrl = URL.createObjectURL(blob)
+    console.log(`url: ${blobUrl}`)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = fileName || ""
+    a.click()
+    URL.revokeObjectURL(blobUrl)
+  } catch (e) {
+    console.log(`download code failed: ${e}`)
+    message.error("下载代码文件失败")
+  } finally {
+    downloadLoading.value = false
+  }
+}
+
 onMounted(loadAppAndAutoGenerate)
 
 onBeforeUnmount(() => {
@@ -353,6 +395,12 @@ onBeforeUnmount(() => {
             <InfoCircleOutlined />
           </template>
           应用详情
+        </a-button>
+        <a-button @click="handleDonwloadCode" type="primary" ghost :loading="downloadLoading" :disabled="!isOwner">
+          <template #icon>
+            <DownloadOutlined />
+          </template>
+          代码下载
         </a-button>
         <a-button v-if="app?.deployKey" type="primary" :loading="deploying" @click="handleCancelDeploy">
           <template #icon>

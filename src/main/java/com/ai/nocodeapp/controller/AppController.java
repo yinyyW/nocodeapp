@@ -14,12 +14,14 @@ import com.ai.nocodeapp.model.dto.app.*;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
-import com.ai.nocodeapp.model.enums.UserRoleEnum;
 import com.ai.nocodeapp.model.vo.app.AppVO;
 import com.ai.nocodeapp.service.AppService;
+import com.ai.nocodeapp.service.ProjectDownloadService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -29,8 +31,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +51,9 @@ public class AppController {
     @Resource
     private AppService appService;
 
+    @Resource
+    private ProjectDownloadService projectDownloadService;
+
     /**
      * 添加应用
      *
@@ -61,24 +66,15 @@ public class AppController {
             , HttpSession httpSession) {
         // 1. 校验参数
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
-
-        // 2. 获取当前用户
+        // 2. 获取身份信息
         Object userObj = httpSession.getAttribute(USER_LOGIN_STATE);
         User userInfo = (User) userObj;
         if (userInfo == null || userInfo.getId() == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-
         // 3. 添加应用
-        App app = new App();
-        BeanUtils.copyProperties(appAddRequest, app);
-        app.setUserId(userInfo.getId());
-        app.setAppName(app.getInitPrompt().substring(0,
-                Math.min(12, app.getInitPrompt().length())));
-        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
-        boolean result = appService.save(app);
-        ThrowUtils.throwIf(!result, ErrorCode.SYSTEM_ERROR);
-        return ResultUtils.success(app.getId());
+        Long appId = appService.createApp(appAddRequest, userInfo);
+        return ResultUtils.success(appId);
     }
 
     @PostMapping("/delete")
@@ -92,7 +88,8 @@ public class AppController {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
         // 3. 删除应用
-        boolean deleteResult = appService.deleteApp(appDeleteRequest.getId(), userInfo);
+        boolean deleteResult = appService.deleteApp(appDeleteRequest.getId(),
+                userInfo);
         ThrowUtils.throwIf(!deleteResult, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);
     }
@@ -321,8 +318,9 @@ public class AppController {
 
     /**
      * 部署应用
+     *
      * @param appDeployRequest 部署应用请求
-     * @param session http session
+     * @param session          http session
      * @return 部署的url
      */
     @PostMapping("/deploy")
@@ -332,14 +330,16 @@ public class AppController {
         // 2. 部署应用
         User userInfo = (User) session.getAttribute(USER_LOGIN_STATE);
         ThrowUtils.throwIf(userInfo == null, ErrorCode.NOT_LOGIN_ERROR);
-        String url = appService.deployApp(appDeployRequest.getAppId(), userInfo);
+        String url = appService.deployApp(appDeployRequest.getAppId(),
+                userInfo);
         return ResultUtils.success(url);
     }
 
     /**
      * 取消部署应用
+     *
      * @param appDeployRequest 部署应用请求
-     * @param session http session
+     * @param session          http session
      * @return 部署的url
      */
     @PostMapping("/deploy/cancel")
@@ -351,6 +351,49 @@ public class AppController {
         ThrowUtils.throwIf(userInfo == null, ErrorCode.NOT_LOGIN_ERROR);
         appService.cancelDeploy(appDeployRequest.getAppId(), userInfo);
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 下载应用源码
+     *
+     * @param appId    应用ID
+     * @param request  HTTP请求
+     * @param response HTTP响应
+     */
+    @GetMapping("/download/{appId}")
+    public void downloadAppCode(@PathVariable Long appId,
+                                HttpServletRequest request,
+                                HttpServletResponse response) {
+        // 1. 参数校验
+        ThrowUtils.throwIf(appId == null || appId <= 0,
+                ErrorCode.PARAMS_ERROR, "应用ID为空");
+        App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+
+        // 2. 获取当前用户
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User userInfo = (User) userObj;
+        ThrowUtils.throwIf(userInfo == null || userInfo.getId() == null,
+                ErrorCode.NOT_LOGIN_ERROR);
+
+        // 3. 权限校验
+        ThrowUtils.throwIf(!app.getUserId().equals(userInfo.getId()),
+                ErrorCode.NO_AUTH_ERROR, "无权下载该应用代码");
+
+        // 4. 获取应用源码路径
+        String projectDirName = app.getCodeGenType() + "_" + appId;
+        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + projectDirName;
+        File file = new File(projectPath);
+        ThrowUtils.throwIf(!file.exists(), ErrorCode.NOT_FOUND_ERROR, "项目源码文件不存在");
+        ThrowUtils.throwIf(!file.isDirectory(), ErrorCode.NOT_FOUND_ERROR, "非法项目源码文件路径");
+
+        // 5. 下载源码
+        String downloadName = appId + "_code";
+        try {
+            projectDownloadService.downloadProjectAsZip(projectPath, downloadName, response);
+        } catch (Throwable e) {
+            log.error("下载源码失败");
+        }
     }
 
 }
