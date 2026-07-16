@@ -14,6 +14,7 @@ import {
   UserOutlined,
   UpOutlined,
   DownloadOutlined,
+  EditOutlined,
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { cancelDeployApp, deleteApp, deployApp, getApp, updateApp } from '@/api/appController'
@@ -22,7 +23,7 @@ import MdRenderer from '@/components/MdRenderer.vue'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { BASE_URL } from '@/common/network'
-
+import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
 
 type ChatMessage = {
   id: string
@@ -32,7 +33,7 @@ type ChatMessage = {
   createTime?: string
 }
 
-const API_BASE_URL = 'http://localhost:8123/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -51,6 +52,8 @@ const isOwner = ref(false)
 const userInput = ref('')
 const deployUrl = ref('')
 const previewReady = ref(false)
+const isEditMode = ref(false)
+const selectedElement = ref<ElementInfo | null>(null)
 const lastCreateTime = ref<string>()
 const messagesBodyRef = ref<HTMLElement>()
 const eventSourceRef = ref<EventSource | null>(null)
@@ -70,6 +73,13 @@ const previewUrl = computed(() => {
     return `${API_BASE_URL}/static/${app.value.codeGenType}_${appId.value}/dist/index.html`
   }
   return `${API_BASE_URL}/static/${app.value.codeGenType}_${appId.value}/`
+})
+
+const visualEditor = new VisualEditor({
+  onElementSelected: (elementInfo) => {
+    console.log('elementSelected', elementInfo)
+    selectedElement.value = elementInfo
+  }
 })
 
 const scrollToBottom = async () => {
@@ -149,7 +159,6 @@ const loadChatHistory = async (isLoadMore: boolean = false) => {
         // 动态更新scrollTop
         const el = messagesBodyRef.value
         const prevScrollHeight = el?.scrollHeight ?? 0
-        console.log(`prev scroll height: ${prevScrollHeight}, scrollTop: ${el?.scrollTop}`)
         messages.value.unshift(...chatMessages)
         await nextTick()
         if (el) {
@@ -173,13 +182,26 @@ const loadChatHistory = async (isLoadMore: boolean = false) => {
 }
 
 const sendMessage = async (content: string, auto = false) => {
-  const userMessage = content.trim()
+  let userMessage = content.trim()
   if (!userMessage || generating.value) {
     return
   }
   closeEventSource()
   previewReady.value = false
   generating.value = true
+
+  // 编辑模式需要将元素信息添加进消息
+  if (selectedElement.value) {
+    let elementContext = '\n\nselected element: '
+    if (selectedElement.value.pagePath) {
+      elementContext += `\n - page path: ${selectedElement.value.pagePath}`
+    }
+    elementContext += `\n - tag: ${selectedElement.value.tagName.toLowerCase()} \n - selector: ${selectedElement.value.selector}`
+    if (selectedElement.value.textContent) {
+      elementContext += `\n content: ${selectedElement.value.textContent}`
+    }
+    userMessage += `\n - ${elementContext}\n`
+  }
 
   const now = Date.now()
   const assistantId = `assistant-${now}`
@@ -206,7 +228,6 @@ const sendMessage = async (content: string, auto = false) => {
   eventSourceRef.value = source
 
   source.onmessage = (event) => {
-    console.log(`onmessage: ${event.data}`);
     try {
       const data = JSON.parse(event.data) as { d?: string }
       appendAssistantChunk(assistantId, data.d ?? '')
@@ -328,7 +349,7 @@ const handleDelete = async () => {
   }
 }
 
-const handleDonwloadCode = async () => {
+const handleDownloadCode = async () =>  {
   if (!appId.value) {
     message.error("应用ID不存在")
     return
@@ -343,7 +364,6 @@ const handleDonwloadCode = async () => {
     })
     if (!response.ok) {
       message.error("下载代码失败")
-      throw new Error("代码文件下载失败")
     }
     // 获取文件名
     const contentDisposition = response.headers.get("Content-Disposition")
@@ -353,21 +373,48 @@ const handleDonwloadCode = async () => {
     const blob = await response.blob()
     // 下载文件
     const blobUrl = URL.createObjectURL(blob)
-    console.log(`url: ${blobUrl}`)
     const a = document.createElement("a")
     a.href = url
     a.download = fileName || ""
     a.click()
     URL.revokeObjectURL(blobUrl)
   } catch (e) {
-    console.log(`download code failed: ${e}`)
     message.error("下载代码文件失败")
   } finally {
     downloadLoading.value = false
   }
 }
 
-onMounted(loadAppAndAutoGenerate)
+const onFrameLoad = () => {
+  const iframe = document.querySelector(".preview-iframe") as HTMLIFrameElement
+  if (iframe && visualEditor) {
+    visualEditor.init(iframe)
+    visualEditor.onIframeLoad()
+  }
+}
+
+const clearSelectedElements = () => {
+  selectedElement.value = null
+  visualEditor.clearSelection()
+}
+
+const toggleEditMode = () => {
+  const iframe = document.querySelector(".preview-iframe") as HTMLIFrameElement
+  if (!previewReady.value || !previewUrl.value || !iframe) {
+    message.warn("请等待页面加载完成")
+    return
+  }
+  isEditMode.value = visualEditor.toggleEditMode()
+}
+
+onMounted(() => {
+  loadAppAndAutoGenerate()
+
+  window.addEventListener('message', (event) => {
+    visualEditor.handleIframeMessage(event.data)
+  })
+})
+
 
 onBeforeUnmount(() => {
   closeEventSource()
@@ -396,7 +443,7 @@ onBeforeUnmount(() => {
           </template>
           应用详情
         </a-button>
-        <a-button @click="handleDonwloadCode" type="primary" ghost :loading="downloadLoading" :disabled="!isOwner">
+        <a-button @click="handleDownloadCode" type="primary" ghost :loading="downloadLoading" :disabled="!isOwner">
           <template #icon>
             <DownloadOutlined />
           </template>
@@ -451,6 +498,37 @@ onBeforeUnmount(() => {
           </a-spin>
         </div>
 
+        <a-alert v-if="selectedElement" type="info" closable @close="clearSelectedElements">
+          <template #message>
+            <div class="selected-element-info">
+              <div class="element-header">
+                <span class="element-tag">
+                  选中元素：{{ selectedElement?.tagName }}
+                </span>
+                <span v-if="selectedElement?.id" class="element-id">
+                  #{{ selectedElement?.id }}
+                </span>
+                <span v-if="selectedElement?.className" class="element-class">
+                  .{{ selectedElement.className.split(' ').join('.') }}
+                </span>
+              </div>
+              <div class="element-details">
+                <div v-if="selectedElement?.textContent" class="element-item">
+                  内容: {{ selectedElement?.textContent.substring(0, 50) }}
+                  {{ selectedElement?.textContent.length > 50 ? '...' : '' }}
+                </div>
+                <div v-if="selectedElement?.pagePath" class="element-item">
+                  页面路径: {{ selectedElement?.pagePath }}
+                </div>
+                <div class="element-item">
+                  选择器:
+                  <code class="element-selector-code">{{ selectedElement?.selector }}</code>
+                </div>
+              </div>
+            </div>
+          </template>
+        </a-alert>
+
         <div class="composer">
           <a-textarea v-model:value="userInput" :rows="3" :disabled="generating" placeholder="描述越详细，页面越具体，可以一步一步完善生成效果"
             @keydown.ctrl.enter.prevent="handleSend" />
@@ -472,19 +550,27 @@ onBeforeUnmount(() => {
 
       <section class="preview-panel">
         <div class="preview-toolbar">
-          <div>
+          <div class="preview-title-area">
             <h2>生成后的网站展示</h2>
-            <p>{{ previewReady ? previewUrl : '生成完成后自动展示页面效果' }}</p>
+            <p>{{ previewReady ? `应用ID: ${appId}` : '生成完成后自动展示页面效果' }}</p>
           </div>
-          <a-button v-if="previewReady && previewUrl" :href="previewUrl" target="_blank">
-            <template #icon>
-              <EyeOutlined />
-            </template>
-            新窗口打开
-          </a-button>
+          <div class="preview-actions">
+            <a-button v-if="isOwner && previewReady" :danger="isEditMode" @click="toggleEditMode">
+              <template #icon>
+                <EditOutlined />
+              </template>
+              {{ isEditMode ? "退出编辑" : "编辑模式" }}
+            </a-button>
+            <a-button v-if="previewReady && previewUrl" :href="previewUrl" target="_blank">
+              <template #icon>
+                <EyeOutlined />
+              </template>
+              新窗口打开
+            </a-button>
+          </div>
         </div>
         <div class="preview-frame-wrap">
-          <iframe v-if="previewReady && previewUrl" :src="previewUrl" title="生成网站预览" />
+          <iframe v-if="previewReady && previewUrl" :src="previewUrl" title="生成网站预览" class="preview-iframe" @load="onFrameLoad" />
           <div v-else class="preview-empty">
             <RobotOutlined />
             <h3>{{ generating ? '正在生成网站文件' : '等待生成结果' }}</h3>
@@ -765,6 +851,16 @@ onBeforeUnmount(() => {
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-title-area {
+  overflow: hidden;
+  min-width: 0;
 }
 
 .preview-frame-wrap {

@@ -3,9 +3,9 @@ import { message } from 'ant-design-vue'
 import router from '@/router'
 
 // 创建 Axios 实例
-export const BASE_URL = 'http://localhost:8123/api'
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const myAxios = axios.create({
-  baseURL: 'http://localhost:8123/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 60000,
   withCredentials: true,
 })
