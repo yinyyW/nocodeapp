@@ -223,6 +223,7 @@ const sendMessage = async (content: string, auto = false) => {
     sessionStorage.setItem(`nocodeapp:auto-gen:${appId.value}`, '1')
   }
 
+  selectedElement.value = null
   const url = `${API_BASE_URL}/app/chat/gen/code?appId=${encodeURIComponent(appId.value)}&userMessage=${encodeURIComponent(userMessage)}`
   const source = new EventSource(url, { withCredentials: true })
   eventSourceRef.value = source

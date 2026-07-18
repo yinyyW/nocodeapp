@@ -1,6 +1,6 @@
 package com.ai.nocodeapp.ai;
 
-import com.ai.nocodeapp.ai.tools.FileWriteTool;
+import com.ai.nocodeapp.ai.tools.*;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
@@ -39,6 +39,9 @@ public class AiCodeGeneratorServiceFactory {
     @Resource
     private RedisChatMemoryStore redisChatMemoryStore;
 
+    @Resource
+    private ToolManager toolManager;
+
     private final Cache<String, AiCodeGeneratorService> serviceCache =
             Caffeine.newBuilder()
                     .maximumSize(1000)
@@ -73,21 +76,20 @@ public class AiCodeGeneratorServiceFactory {
                 .build();
         chatHistoryService.loadChatHistoryToMemory(appId, chatMemory, 20);
         return switch (codeGenTypeEnum) {
-            case CodeGenTypeEnum.HTML, CodeGenTypeEnum.MULTI_FILE ->
-                    AiServices.builder(AiCodeGeneratorService.class)
-                            .chatMemory(chatMemory)
-                            .chatModel(chatModel)
-                            .streamingChatModel(openAiStreamingChatModel)
-                            .build();
-            case CodeGenTypeEnum.VUE_PROJECT ->
-                    AiServices.builder(AiCodeGeneratorService.class)
-                            .chatMemory(chatMemory)
-                            .chatMemoryProvider(memoryId -> chatMemory)
-                            .streamingChatModel(reasoningStreamingChatModel)
-                            .tools(new FileWriteTool())
-                            .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(toolExecutionRequest, "Error: there is no tool called: " + toolExecutionRequest.name()))
-                            .build();
-            default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持生成代码类型: " + codeGenTypeEnum.getValue());
+            case CodeGenTypeEnum.HTML, CodeGenTypeEnum.MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
+                    .chatMemory(chatMemory)
+                    .chatModel(chatModel)
+                    .streamingChatModel(openAiStreamingChatModel)
+                    .build();
+            case CodeGenTypeEnum.VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
+                    .chatMemory(chatMemory)
+                    .chatMemoryProvider(memoryId -> chatMemory)
+                    .streamingChatModel(reasoningStreamingChatModel)
+                    .tools(toolManager.getAllTools())
+                    .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(toolExecutionRequest, "Error: there is no tool called: " + toolExecutionRequest.name()))
+                    .build();
+            default ->
+                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "不支持生成代码类型: " + codeGenTypeEnum.getValue());
         };
     }
 
@@ -104,7 +106,7 @@ public class AiCodeGeneratorServiceFactory {
     /**
      * 根据appId创建AI服务
      *
-     * @param appId 应用id
+     * @param appId           应用id
      * @param codeGenTypeEnum 生成类型
      * @return AI service
      */
