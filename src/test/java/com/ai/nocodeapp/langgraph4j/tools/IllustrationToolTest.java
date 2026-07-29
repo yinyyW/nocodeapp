@@ -1,5 +1,6 @@
 package com.ai.nocodeapp.langgraph4j.tools;
 
+import com.ai.nocodeapp.langgraph4j.model.ImageResource;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,7 +18,7 @@ class IllustrationToolTest {
     @Test
     void testSearchIllustrations() {
         // 测试正常搜索插画
-        List<String> illustrations = illustrationTool.searchIllustrations("happy");
+        List<ImageResource> illustrations = illustrationTool.searchIllustrations("happy");
         assertNotNull(illustrations);
     }
 }

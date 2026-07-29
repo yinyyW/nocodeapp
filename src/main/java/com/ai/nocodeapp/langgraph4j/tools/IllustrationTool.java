@@ -4,6 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.ai.nocodeapp.langgraph4j.model.ImageResource;
+import com.ai.nocodeapp.langgraph4j.model.enums.ImageCategoryEnum;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +26,9 @@ public class IllustrationTool {
     private static final String API_URL = "https://undraw.co/_next/data/nS41BRGVYK4TTVjGNap_q/search/%s.json?term=%s";
 
     @Tool("搜集插画图片，网站美化和装饰")
-    public List<String> searchIllustrations(@P("搜索关键词，必须是单个英文单词") String query) {
+    public List<ImageResource> searchIllustrations(@P("搜索关键词，必须是单个英文单词") String query) {
         String apiUrl = String.format(API_URL, query, query);
-        List<String> imageList = new ArrayList<>();
+        List<ImageResource> imageList = new ArrayList<>();
         int maxCount = 12;
         try {
             HttpClient client = HttpClient.newBuilder()
@@ -56,9 +58,14 @@ public class IllustrationTool {
                 int cnt = Math.min(maxCount, result.size());
                 for (int i = 0; i < cnt; i++) {
                     JSONObject imgObj = result.getJSONObject(i);
+                    String title = imgObj.getStr("title", "插画");
                     String media = imgObj.getStr("media");
                     if (!StrUtil.isEmpty(media) && !StrUtil.isBlank(media)) {
-                        imageList.add(media);
+                        imageList.add(ImageResource.builder()
+                                .category(ImageCategoryEnum.ILLUSTRATION)
+                                .url(media)
+                                .description(title)
+                                .build());
                     }
                 }
             }

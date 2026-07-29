@@ -12,7 +12,7 @@ class CodeGenWorkFlowTest {
 
     @Test
     void executeWorkflow() {
-        WorkflowContext result = new CodeGenWorkFlow().executeWorkflow("设计一个个人博客");
+        WorkflowContext result = new CodeGenWorkFlow().executeWorkflow("创建一个企业官网，展示公司形象和业务介绍");
         Assertions.assertNotNull(result);
     }
 }

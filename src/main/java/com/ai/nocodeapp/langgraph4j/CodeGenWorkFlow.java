@@ -1,5 +1,6 @@
 package com.ai.nocodeapp.langgraph4j;
 
+import cn.hutool.json.JSONUtil;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
 import com.ai.nocodeapp.langgraph4j.model.QualityResult;
@@ -12,6 +13,7 @@ import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.bsc.langgraph4j.prebuilt.MessagesStateGraph;
+import reactor.core.publisher.Flux;
 
 import java.util.Map;
 
@@ -67,6 +69,51 @@ public class CodeGenWorkFlow {
         }
         log.info("工作流执行完成");
         return finalContext;
+    }
+
+    public Flux<String> executeWorkflowFlux(String originalPrompt) {
+        return Flux.create(sink -> {
+            Thread.startVirtualThread(() -> {
+                try {
+                    CompiledGraph<MessagesState<String>> workflow = createGraph();
+                    // 初始化上下文状态
+                    WorkflowContext context = WorkflowContext.builder()
+                            .originalPrompt(originalPrompt).currentStep("初始化").build();
+                    sink.next(formatSseEvent("workflow_start", Map.of("message", "开始工作流", "originalPrompt", originalPrompt)));
+                    log.info("开始执行工作流");
+                    int stepCounter = 1;
+                    WorkflowContext finalContext = null;
+                    for (NodeOutput<MessagesState<String>> output : workflow.stream(Map.of(WorkflowContext.WORKFLOW_CONTEXT_KEY, context))) {
+                        log.info("当前执行步骤：{}", stepCounter);
+                        // 获取当前状态
+                        WorkflowContext currentContext = WorkflowContext.getContext(output.state());
+                        if (currentContext != null) {
+                            finalContext = currentContext;
+                            log.info("当前工作流： {}", currentContext);
+                            sink.next(formatSseEvent("step_completed", Map.of("stepNumber", stepCounter, "currentStep", currentContext.getCurrentStep())));
+                        }
+                        stepCounter++;
+                    }
+                    sink.next(formatSseEvent("step_completed", Map.of("message", "工作流已完成")));
+                    log.info("工作流执行完成");
+                    sink.complete();
+                } catch (Exception e) {
+                    log.error("工作流异常: {}", e.getMessage(), e);
+                    sink.next(formatSseEvent("workflow_error", Map.of("error", e.getMessage() ,"message", "执行工作流失败")));
+                    sink.error(e);
+                }
+            });
+        });
+    }
+
+    private String formatSseEvent(String eventType, Object obj) {
+        try {
+            String objStr = JSONUtil.toJsonStr(obj);
+            return "eventType: " + eventType + "\ndata: " + objStr + "\n\n";
+        } catch (Exception e) {
+            log.error("格式化SSE事件失败: {}", e.getMessage(), e);
+            return "event: error\ndata: 格式化失败\n\n";
+        }
     }
 
     private String routeBuildOrSkip(MessagesState<String> state) {

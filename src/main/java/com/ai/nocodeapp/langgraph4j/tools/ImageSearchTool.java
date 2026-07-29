@@ -4,6 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.ai.nocodeapp.langgraph4j.model.ImageResource;
+import com.ai.nocodeapp.langgraph4j.model.enums.ImageCategoryEnum;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +30,8 @@ public class ImageSearchTool {
     private static final String IMAGE_SEARCH_API = "https://api.pexels.com/v1/search";
 
     @Tool("搜集内容相关的图片，用于网站展示")
-    public List<String> searchImages(@P("搜索关键词，必须是单个英文单词") String query) {
-        List<String> imageList = new ArrayList<>();
+    public List<ImageResource> searchImages(@P("搜索关键词，必须是单个英文单词") String query) {
+        List<ImageResource> imageList = new ArrayList<>();
         int maxCount = 12;
         try {
             HttpClient client = HttpClient.newBuilder()
@@ -66,7 +68,11 @@ public class ImageSearchTool {
                     JSONObject src = imgObj.getJSONObject("src");
                     String medium = src.getStr("medium");
                     if (!StrUtil.isEmpty(medium) && !StrUtil.isBlank(medium)) {
-                        imageList.add(medium);
+                        imageList.add(ImageResource.builder()
+                                .category(ImageCategoryEnum.CONTENT)
+                                .url(medium)
+                                .description(imgObj.getStr("alt"))
+                                .build());
                     }
                 }
             }

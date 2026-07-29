@@ -25,7 +25,7 @@ public class FileWriteTool extends BaseTool {
     public String writeFile(@ToolMemoryId long appId,
                             @P("文件的相对路径") String relativePath,
                             @P("文件的内容") String content) {
-        log.error("write file tool: appid {}", appId);
+        log.info("write file tool: appid {}", appId);
         try {
             // 获取目标目录
             Path path = Paths.get(relativePath);

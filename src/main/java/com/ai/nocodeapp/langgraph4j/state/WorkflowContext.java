@@ -1,5 +1,6 @@
 package com.ai.nocodeapp.langgraph4j.state;
 
+import com.ai.nocodeapp.langgraph4j.model.ImageResource;
 import com.ai.nocodeapp.langgraph4j.model.QualityResult;
 import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,7 @@ import org.bsc.langgraph4j.prebuilt.MessagesState;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +42,11 @@ public class WorkflowContext implements Serializable {
      * 图片资源字符串
      */
     private String imageListStr;
+
+    /**
+     * 图片资源列表
+     */
+    private List<ImageResource> imageResourceList;
 
     /**
      * 增强后的提示词
