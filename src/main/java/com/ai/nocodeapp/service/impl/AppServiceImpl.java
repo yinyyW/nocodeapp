@@ -5,6 +5,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.ai.AiCodeGenTypeRoutingService;
+import com.ai.nocodeapp.ai.AiCodeGenTypeRoutingServiceFactory;
 import com.ai.nocodeapp.constants.AppConstant;
 import com.ai.nocodeapp.core.AiCodeGeneratorFacade;
 import com.ai.nocodeapp.core.builder.VueProjectBuilder;
@@ -74,7 +75,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     private ScreenshotService screenshotService;
 
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
 
     public AppServiceImpl(UserService userService) {
         this.userService = userService;
@@ -390,6 +391,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
                 ErrorCode.NOT_LOGIN_ERROR);
 
         // 2. 智能获取代码生成类型
+        AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = aiCodeGenTypeRoutingServiceFactory.creatAiCodeGenTypeRoutingService();
         CodeGenTypeEnum codeGenTypeEnum =
                 aiCodeGenTypeRoutingService.routeCodeGenType(appAddRequest.getInitPrompt()).getCodeGenerationType();
         if (codeGenTypeEnum == null) {

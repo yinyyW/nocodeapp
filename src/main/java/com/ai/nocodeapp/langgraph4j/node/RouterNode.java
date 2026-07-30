@@ -1,6 +1,7 @@
 package com.ai.nocodeapp.langgraph4j.node;
 
 import com.ai.nocodeapp.ai.AiCodeGenTypeRoutingService;
+import com.ai.nocodeapp.ai.AiCodeGenTypeRoutingServiceFactory;
 import com.ai.nocodeapp.langgraph4j.state.WorkflowContext;
 import com.ai.nocodeapp.model.dto.CodeGenTypeRoutingResult;
 import com.ai.nocodeapp.model.enums.CodeGenTypeEnum;
@@ -8,6 +9,8 @@ import com.ai.nocodeapp.utils.SpringContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.bsc.langgraph4j.action.AsyncNodeAction;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
+
+import javax.swing.*;
 
 import static org.bsc.langgraph4j.action.AsyncNodeAction.node_async;
 
@@ -22,7 +25,8 @@ public class RouterNode {
             // 获取智能路由服务
             context.setCurrentStep("智能路由");
             try {
-                AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = SpringContextUtil.getBean(AiCodeGenTypeRoutingService.class);
+                AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory = SpringContextUtil.getBean(AiCodeGenTypeRoutingServiceFactory.class);
+                AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = aiCodeGenTypeRoutingServiceFactory.creatAiCodeGenTypeRoutingService();
                 CodeGenTypeRoutingResult result = aiCodeGenTypeRoutingService.routeCodeGenType(originalPrompt);
                 context.setGenerationType(result.getCodeGenerationType());
             } catch (Exception e) {

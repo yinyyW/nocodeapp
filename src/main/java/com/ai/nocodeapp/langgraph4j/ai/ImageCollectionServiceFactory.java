@@ -19,7 +19,7 @@ public class ImageCollectionServiceFactory {
     @Resource
     private ImageSearchTool imageSearchTool;
 
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
 
     /**

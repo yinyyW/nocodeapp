@@ -1,5 +1,6 @@
 package com.ai.nocodeapp.ai;
 
+import com.ai.nocodeapp.utils.SpringContextUtil;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
@@ -14,16 +15,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AiCodeGenTypeRoutingServiceFactory {
 
-    @Resource
-    private ChatModel chatModel;
-
     /**
      * 创建AI代码生成类型路由服务实例
      */
     @Bean
     public AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService() {
+        return creatAiCodeGenTypeRoutingService();
+    }
+
+    /**
+     * 创建AI代码生成类型路由服务实例
+     */
+    public AiCodeGenTypeRoutingService creatAiCodeGenTypeRoutingService() {
+        ChatModel routingChatModelPrototype = SpringContextUtil.getBean("routingChatModelPrototype", ChatModel.class);
         return AiServices.builder(AiCodeGenTypeRoutingService.class)
-                .chatModel(chatModel)
+                .chatModel(routingChatModelPrototype)
                 .build();
     }
 }
