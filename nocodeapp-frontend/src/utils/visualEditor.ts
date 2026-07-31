@@ -57,11 +57,13 @@ export class VisualEditor {
   disableEditMode() {
     this.isEditMode = false
     this.sendMessageToIframe({
+      source: 'app',
       type: 'TOGGLE_EDIT_MODE',
       editMode: false,
     })
     // 清除所有编辑状态
     this.sendMessageToIframe({
+      source: 'app',
       type: 'CLEAR_ALL_EFFECTS',
     })
   }
@@ -84,6 +86,7 @@ export class VisualEditor {
   syncState() {
     if (!this.isEditMode) {
       this.sendMessageToIframe({
+        source: 'app',
         type: 'CLEAR_ALL_EFFECTS',
       })
     }
@@ -94,6 +97,7 @@ export class VisualEditor {
    */
   clearSelection() {
     this.sendMessageToIframe({
+      source: 'app',
       type: 'CLEAR_SELECTION',
     })
   }
@@ -118,7 +122,11 @@ export class VisualEditor {
    * 处理来自 iframe 的消息
    */
   handleIframeMessage(event: MessageEvent) {
-    const { type, elementInfo } = event.data
+    if (!event.data?.source) return
+
+    const { source, type, elementInfo } = event.data
+    if (source !== 'my-editor') return
+
     switch (type) {
       case 'ELEMENT_SELECTED':
         if (this.options.onElementSelected && elementInfo) {
@@ -153,6 +161,7 @@ export class VisualEditor {
           // 检查是否已经注入过脚本
           if (this.iframe!.contentDocument.getElementById('visual-edit-script')) {
             this.sendMessageToIframe({
+              source: 'app',
               type: 'TOGGLE_EDIT_MODE',
               editMode: true,
             })
@@ -302,6 +311,8 @@ export class VisualEditor {
 
            const mouseoverHandler = (event) => {
              if (!isEditMode) return;
+             // 过滤消息
+             // if (!event?.source || event.source !== 'app') return;
 
              const target = event.target;
              if (target === currentHoverElement || target === currentSelectedElement) return;
@@ -315,6 +326,7 @@ export class VisualEditor {
 
            const mouseoutHandler = (event) => {
              if (!isEditMode) return;
+             // if (!event?.source || !event.source !== "app") return;
 
              const target = event.target;
              if (!event.relatedTarget || !target.contains(event.relatedTarget)) {
@@ -324,6 +336,7 @@ export class VisualEditor {
 
            const clickHandler = (event) => {
              if (!isEditMode) return;
+             // if (!event?.source || !event.source !== "app") return;
 
              event.preventDefault();
              event.stopPropagation();
@@ -341,8 +354,8 @@ export class VisualEditor {
              const elementInfo = getElementInfo(target);
              try {
                window.parent.postMessage({
-                 type: 'ELEMENT_SELECTED',
-                 data: { type: 'ELEMENT_SELECTED', elementInfo }
+                  type: 'ELEMENT_SELECTED',
+                  data: { type: 'ELEMENT_SELECTED', elementInfo, source: 'my-editor' }
                }, '*');
              } catch {
                // 静默处理发送失败
@@ -361,31 +374,38 @@ export class VisualEditor {
 
         // 监听父窗口消息
         window.addEventListener('message', (event) => {
-           const { type, editMode } = event.data;
-           switch (type) {
-             case 'TOGGLE_EDIT_MODE':
-               isEditMode = editMode;
-               if (isEditMode) {
-                 injectStyles();
-                 setupEventListeners();
-                 showEditTip();
-               } else {
-                 clearHoverEffect();
-                 clearSelectedEffect();
-               }
-               break;
-             case 'CLEAR_SELECTION':
-               clearSelectedEffect();
-               break;
-             case 'CLEAR_ALL_EFFECTS':
-               isEditMode = false;
-               clearHoverEffect();
-               clearSelectedEffect();
-               const tip = document.getElementById('edit-tip');
-               if (tip) tip.remove();
-               break;
-           }
-         });
+            if (!event.data || !event.data.source) {
+              return
+            }
+            const { source, type, editMode } = event.data;
+            if (source !== "app") {
+              console.log("message not originate from app");
+              return;
+            }
+            switch (type) {
+              case 'TOGGLE_EDIT_MODE':
+                isEditMode = editMode;
+                if (isEditMode) {
+                  injectStyles();
+                  setupEventListeners();
+                  showEditTip();
+                } else {
+                  clearHoverEffect();
+                  clearSelectedEffect();
+                }
+                break;
+              case 'CLEAR_SELECTION':
+                clearSelectedEffect();
+                break;
+              case 'CLEAR_ALL_EFFECTS':
+                isEditMode = false;
+                clearHoverEffect();
+                clearSelectedEffect();
+                const tip = document.getElementById('edit-tip');
+                if (tip) tip.remove();
+                break;
+            }
+          });
 
          function showEditTip() {
            if (document.getElementById('edit-tip')) return;

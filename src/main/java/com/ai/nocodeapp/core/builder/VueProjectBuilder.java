@@ -5,11 +5,28 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
 public class VueProjectBuilder {
+
+    /**
+     * 异步构建工程
+     * @param projectPath 项目路径
+     * @return 异步结果
+     */
+    public CompletableFuture<Boolean> buildProjectWithCompletableFuture(String projectPath) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return buildProject(projectPath);
+            } catch (Exception e) {
+                log.error("异步构建Vue项目失败：" + e.getMessage(), e);
+                return false;
+            }
+        });
+    }
 
     /**
      * 异步构建Vue工程项目

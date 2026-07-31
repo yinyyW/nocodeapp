@@ -75,7 +75,7 @@ public class AiCodeGeneratorServiceFactory {
                 StreamingChatModel streamingChatModelPrototype = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
                 yield AiServices.builder(AiCodeGeneratorService.class)
                         .chatMemory(chatMemory)
-                        .chatModel(chatModel)
+//                        .chatModel(chatModel)
                         .streamingChatModel(streamingChatModelPrototype)
                         .build();
             }

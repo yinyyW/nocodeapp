@@ -5,6 +5,7 @@ import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.user.UserVO;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -72,4 +73,9 @@ public interface UserService extends IService<User> {
      * @return
      */
     Page<User> queryUsers(UserQueryRequest userQueryRequest);
+
+    /**
+     * 获取当前登录用户
+     */
+    User getLoginUser(HttpServletRequest request);
 }

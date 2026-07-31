@@ -14,6 +14,8 @@ import com.ai.nocodeapp.model.dto.app.*;
 import com.ai.nocodeapp.model.entity.App;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.app.AppVO;
+import com.ai.nocodeapp.ratelimiter.annotation.RateLimit;
+import com.ai.nocodeapp.ratelimiter.enums.RateLimitType;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.ProjectDownloadService;
 import com.mybatisflex.core.paginate.Page;
@@ -291,6 +293,7 @@ public class AppController {
      */
     @GetMapping(value = "/chat/gen/code", produces =
             MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER, rateInterval = 60, rate = 5, message = "AI请求过于频繁，请稍后重试")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                        @RequestParam String userMessage,
                                                        HttpSession httpSession) {

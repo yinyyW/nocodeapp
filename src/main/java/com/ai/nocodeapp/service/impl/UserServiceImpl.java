@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.ai.nocodeapp.common.utils.PasswordEncoderUtils;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
+import com.ai.nocodeapp.exception.ThrowUtils;
 import com.ai.nocodeapp.model.dto.user.UserQueryRequest;
 import com.ai.nocodeapp.model.enums.UserRoleEnum;
 import com.ai.nocodeapp.model.vo.user.UserVO;
@@ -14,6 +15,8 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.mapper.UserMapper;
 import com.ai.nocodeapp.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.ai.nocodeapp.constants.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户 服务层实现。 *
@@ -174,6 +179,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         int pageNum = userQueryRequest.getPageNum();
         int pageSize = userQueryRequest.getPageSize();
         return page(Page.of(pageNum, pageSize), queryWrapper);
+    }
+
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        HttpSession httpSession = request.getSession();
+        User userInfo = (User) httpSession.getAttribute(USER_LOGIN_STATE);
+        ThrowUtils.throwIf(userInfo == null, ErrorCode.NOT_LOGIN_ERROR);
+        return userInfo;
     }
 
 }

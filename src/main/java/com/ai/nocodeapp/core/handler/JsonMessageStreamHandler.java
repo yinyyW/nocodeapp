@@ -17,6 +17,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.util.HashSet;
@@ -53,7 +54,7 @@ public class JsonMessageStreamHandler {
         StringBuilder chatHistoryStringBuilder = new StringBuilder();
         // 用于跟踪已经见过的工具ID，判断是否是第一次调用
         Set<String> seenToolIds = new HashSet<>();
-        return originFlux
+        Flux<String> aiFlux = originFlux
                 .map(chunk -> {
                     // 解析每个 JSON 消息块
                     return handleJsonMessageChunk(chunk,
@@ -66,10 +67,6 @@ public class JsonMessageStreamHandler {
                     chatHistoryService.addChatMessage(appId, aiResponse,
                             ChatHistoryMessageTypeEnum.AI.getValue(),
                             loginUser.getId());
-                    // 异步构建Vue项目
-                    String projectPath =
-                            AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + CodeGenTypeEnum.VUE_PROJECT.getValue() + "_" + appId;
-                    vueProjectBuilder.buildProjectAsync(projectPath);
                 })
                 .doOnError(error -> {
                     // 如果AI回复失败，也要记录错误消息
@@ -78,6 +75,18 @@ public class JsonMessageStreamHandler {
                             ChatHistoryMessageTypeEnum.AI.getValue(),
                             loginUser.getId());
                 });
+        String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + CodeGenTypeEnum.VUE_PROJECT.getValue() + "_" + appId;
+        Flux<String> buildFlux = Flux.concat(Mono.just("\n\n[Vite工具]打包构建中\n\n"),
+                Mono.fromFuture(
+                        vueProjectBuilder.buildProjectWithCompletableFuture(projectPath))
+                        .map(success -> {
+                            if (success) {
+                                return "\n\n[Vite构建工具] 构建完成 \n\n";
+                            } else {
+                                return "\n\n[Vite构建工具] 构建失败 \n\n";
+                            }
+                        }));
+        return aiFlux.concatWith(buildFlux);
     }
 
     /**

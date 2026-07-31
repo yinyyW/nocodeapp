@@ -24,6 +24,7 @@ import { listAppChatHistory } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { BASE_URL } from '@/common/network'
 import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
+import { error } from 'console'
 
 type ChatMessage = {
   id: string
@@ -241,6 +242,25 @@ const sendMessage = async (content: string, auto = false) => {
     finishGenerate()
   })
 
+  source.addEventListener('business-error', (event: MessageEvent) => {
+    console.log("业务异常 ", event)
+    closeEventSource()
+    try {
+      const errorData = JSON.parse(event.data)
+      console.log("流式生成异常", errorData);
+      const errorMessage = errorData.message || "生成过程中出现错误"
+      const target = messages.value.find((item) => item.id === assistantId)
+      if (target && !target.content) {
+        target.content = `${errorMessage}`
+        target.loading = false
+      }
+      message.error(errorMessage)
+    } catch (parseError) {
+      console.log("解析错误事件失败", parseError)
+      message.error("解析错误事件失败")
+    }
+  })
+
   source.onerror = () => {
     closeEventSource()
     generating.value = false
@@ -350,7 +370,7 @@ const handleDelete = async () => {
   }
 }
 
-const handleDownloadCode = async () =>  {
+const handleDownloadCode = async () => {
   if (!appId.value) {
     message.error("应用ID不存在")
     return
@@ -571,7 +591,8 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="preview-frame-wrap">
-          <iframe v-if="previewReady && previewUrl" :src="previewUrl" title="生成网站预览" class="preview-iframe" @load="onFrameLoad" />
+          <iframe v-if="previewReady && previewUrl" :src="previewUrl" title="生成网站预览" class="preview-iframe"
+            @load="onFrameLoad" />
           <div v-else class="preview-empty">
             <RobotOutlined />
             <h3>{{ generating ? '正在生成网站文件' : '等待生成结果' }}</h3>
