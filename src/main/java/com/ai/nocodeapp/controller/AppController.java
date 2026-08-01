@@ -18,6 +18,7 @@ import com.ai.nocodeapp.ratelimiter.annotation.RateLimit;
 import com.ai.nocodeapp.ratelimiter.enums.RateLimitType;
 import com.ai.nocodeapp.service.AppService;
 import com.ai.nocodeapp.service.ProjectDownloadService;
+import com.ai.nocodeapp.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
@@ -26,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -55,6 +57,8 @@ public class AppController {
 
     @Resource
     private ProjectDownloadService projectDownloadService;
+    @Autowired
+    private UserService userService;
 
     /**
      * 添加应用
@@ -206,14 +210,17 @@ public class AppController {
      */
     @PostMapping("/admin/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> deleteAppByAdmin(@RequestBody AppDeleteRequest appDeleteRequest) {
+    public BaseResponse<Boolean> deleteAppByAdmin(@RequestBody AppDeleteRequest appDeleteRequest, HttpServletRequest request) {
         ThrowUtils.throwIf(appDeleteRequest == null || appDeleteRequest.getId() == null || appDeleteRequest.getId() < 0, ErrorCode.PARAMS_ERROR);
         // 判断是否存在
         Long id = appDeleteRequest.getId();
         App oldApp = appService.getById(id);
         ThrowUtils.throwIf(oldApp == null, ErrorCode.NOT_FOUND_ERROR);
-        boolean result = appService.removeById(id);
-        return ResultUtils.success(result);
+        User userInfo = userService.getLoginUser(request);
+        boolean deleteResult = appService.deleteApp(appDeleteRequest.getId(),
+                userInfo);
+        ThrowUtils.throwIf(!deleteResult, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(true);
     }
 
     /**

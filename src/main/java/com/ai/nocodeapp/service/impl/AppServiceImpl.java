@@ -32,9 +32,9 @@ import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.javassist.compiler.CodeGen;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -55,6 +55,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
+
+    @Value("${code.deploy-host:http://localhost}")
+    private String deployHost;
 
     @Resource
     private final UserService userService;
@@ -297,7 +300,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         boolean updateResult = updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用失败");
         // 7. 生成截图封面并保存至COS存储库
-        String appUrl = AppConstant.CODE_DEPLOY_HOST + "/" + deployKey;
+        String appUrl = String.format("%s/%s/", deployHost, deployKey);
         generateAndUploadScreenshotAsync(appUrl, appId);
         // 8. 返回部署url
         return appUrl;

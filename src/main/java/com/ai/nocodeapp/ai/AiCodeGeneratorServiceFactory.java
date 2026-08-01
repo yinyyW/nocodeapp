@@ -1,5 +1,6 @@
 package com.ai.nocodeapp.ai;
 
+import com.ai.nocodeapp.ai.guardrail.PromptSafetyInputGuardrail;
 import com.ai.nocodeapp.ai.tools.*;
 import com.ai.nocodeapp.exception.BusinessException;
 import com.ai.nocodeapp.exception.ErrorCode;
@@ -24,9 +25,6 @@ import java.time.Duration;
 @Configuration
 @Slf4j
 public class AiCodeGeneratorServiceFactory {
-
-    @Resource(name = "openAiChatModel")
-    private ChatModel chatModel;
 
     @Resource
     private ChatHistoryService chatHistoryService;
@@ -75,6 +73,7 @@ public class AiCodeGeneratorServiceFactory {
                 StreamingChatModel streamingChatModelPrototype = SpringContextUtil.getBean("streamingChatModelPrototype", StreamingChatModel.class);
                 yield AiServices.builder(AiCodeGeneratorService.class)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
 //                        .chatModel(chatModel)
                         .streamingChatModel(streamingChatModelPrototype)
                         .build();
@@ -83,9 +82,11 @@ public class AiCodeGeneratorServiceFactory {
                 StreamingChatModel reasoningStreamingChatModelPrototype = SpringContextUtil.getBean("reasoningStreamingChatModelPrototype", StreamingChatModel.class);
                 yield  AiServices.builder(AiCodeGeneratorService.class)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail())
                         .chatMemoryProvider(memoryId -> chatMemory)
                         .streamingChatModel(reasoningStreamingChatModelPrototype)
                         .tools(toolManager.getAllTools())
+                        .maxSequentialToolsInvocations(20)
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(toolExecutionRequest, "Error: there is no tool called: " + toolExecutionRequest.name()))
                         .build();
             }
