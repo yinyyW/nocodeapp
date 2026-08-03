@@ -1,6 +1,6 @@
 package com.ai.nocodeapp.model.dto.user;
 
-import com.ai.nocodeapp.common.network.PageRequest;
+import com.ai.nocodeapp.user.common.network.PageRequest;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

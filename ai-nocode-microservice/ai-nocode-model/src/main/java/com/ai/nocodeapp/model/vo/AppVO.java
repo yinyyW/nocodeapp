@@ -1,15 +1,13 @@
-package com.ai.nocodeapp.model.dto.app;
+package com.ai.nocodeapp.model.vo;
 
-import com.ai.nocodeapp.user.common.network.PageRequest;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
-@EqualsAndHashCode(callSuper = true)
 @Data
-public class AppQueryRequest extends PageRequest implements Serializable {
+public class AppVO implements Serializable {
 
     /**
      * id
@@ -42,6 +40,11 @@ public class AppQueryRequest extends PageRequest implements Serializable {
     private String deployKey;
 
     /**
+     * 部署时间
+     */
+    private LocalDateTime deployedTime;
+
+    /**
      * 优先级
      */
     private Integer priority;
@@ -50,6 +53,21 @@ public class AppQueryRequest extends PageRequest implements Serializable {
      * 创建用户id
      */
     private Long userId;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updateTime;
+
+    /**
+     * 创建用户信息
+     */
+    private UserVO user;
 
     @Serial
     private static final long serialVersionUID = 1L;
