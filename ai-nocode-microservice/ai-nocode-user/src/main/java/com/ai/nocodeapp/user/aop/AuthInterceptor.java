@@ -1,8 +1,8 @@
 package com.ai.nocodeapp.user.aop;
 
-import com.ai.nocodeapp.user.annotation.AuthCheck;
-import com.ai.nocodeapp.user.exception.BusinessException;
-import com.ai.nocodeapp.user.exception.ErrorCode;
+import com.ai.nocodeapp.common.annotation.AuthCheck;
+import com.ai.nocodeapp.common.exception.BusinessException;
+import com.ai.nocodeapp.common.exception.ErrorCode;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.enums.UserRoleEnum;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +15,7 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import static com.ai.nocodeapp.user.constants.UserConstant.USER_LOGIN_STATE;
+import static com.ai.nocodeapp.common.constants.UserConstant.USER_LOGIN_STATE;
 
 @Aspect
 @Component

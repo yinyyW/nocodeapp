@@ -1,7 +1,7 @@
 package com.ai.nocodeapp.user.innerservice;
 
-import com.ai.nocodeapp.user.exception.BusinessException;
-import com.ai.nocodeapp.user.exception.ErrorCode;
+import com.ai.nocodeapp.common.exception.BusinessException;
+import com.ai.nocodeapp.common.exception.ErrorCode;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
-import static com.ai.nocodeapp.user.constants.UserConstant.USER_LOGIN_STATE;
+import static com.ai.nocodeapp.common.constants.UserConstant.USER_LOGIN_STATE;
 
 public interface InnerUserService {
 

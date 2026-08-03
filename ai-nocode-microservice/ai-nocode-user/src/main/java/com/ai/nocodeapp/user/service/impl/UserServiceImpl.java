@@ -6,10 +6,10 @@ import com.ai.nocodeapp.model.dto.user.UserQueryRequest;
 import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.enums.UserRoleEnum;
 import com.ai.nocodeapp.model.vo.UserVO;
-import com.ai.nocodeapp.user.common.utils.PasswordEncoderUtils;
-import com.ai.nocodeapp.user.exception.BusinessException;
-import com.ai.nocodeapp.user.exception.ErrorCode;
-import com.ai.nocodeapp.user.exception.ThrowUtils;
+import com.ai.nocodeapp.common.common.utils.PasswordEncoderUtils;
+import com.ai.nocodeapp.common.exception.BusinessException;
+import com.ai.nocodeapp.common.exception.ErrorCode;
+import com.ai.nocodeapp.common.exception.ThrowUtils;
 import com.ai.nocodeapp.user.mapper.UserMapper;
 import com.ai.nocodeapp.user.service.UserService;
 import com.mybatisflex.core.paginate.Page;
@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.ai.nocodeapp.user.constants.UserConstant.USER_LOGIN_STATE;
+import static com.ai.nocodeapp.common.constants.UserConstant.USER_LOGIN_STATE;
 
 
 /**

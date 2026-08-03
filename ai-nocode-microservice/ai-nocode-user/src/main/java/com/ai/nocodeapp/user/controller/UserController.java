@@ -5,12 +5,12 @@ import com.ai.nocodeapp.model.entity.User;
 import com.ai.nocodeapp.model.vo.UserLoginResponse;
 import com.ai.nocodeapp.model.vo.UserRegisterResponse;
 import com.ai.nocodeapp.model.vo.UserVO;
-import com.ai.nocodeapp.user.annotation.AuthCheck;
-import com.ai.nocodeapp.user.common.network.BaseResponse;
-import com.ai.nocodeapp.user.common.utils.ResultUtils;
-import com.ai.nocodeapp.user.exception.BusinessException;
-import com.ai.nocodeapp.user.exception.ErrorCode;
-import com.ai.nocodeapp.user.exception.ThrowUtils;
+import com.ai.nocodeapp.common.annotation.AuthCheck;
+import com.ai.nocodeapp.common.common.network.BaseResponse;
+import com.ai.nocodeapp.common.common.utils.ResultUtils;
+import com.ai.nocodeapp.common.exception.BusinessException;
+import com.ai.nocodeapp.common.exception.ErrorCode;
+import com.ai.nocodeapp.common.exception.ThrowUtils;
 import com.ai.nocodeapp.user.service.UserService;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import static com.ai.nocodeapp.user.constants.UserConstant.ADMIN_ROLE;
-import static com.ai.nocodeapp.user.constants.UserConstant.USER_LOGIN_STATE;
+import static com.ai.nocodeapp.common.constants.UserConstant.ADMIN_ROLE;
+import static com.ai.nocodeapp.common.constants.UserConstant.USER_LOGIN_STATE;
 
 
 /**
