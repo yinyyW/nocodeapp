@@ -177,7 +177,7 @@ public class AppController {
      */
     @Cacheable(
             value = "good_app_page",
-            key = "T(com.ai.nocodeapp.utils.CacheKeyUtils).generateKey(#appQueryRequest)",
+            key = "T(com.ai.nocodeapp.common.utils.CacheKeyUtils).generateKey(#appQueryRequest)",
             condition = "#appQueryRequest.pageNum <= 10"
     )
     @PostMapping("/good/list/page/vo")

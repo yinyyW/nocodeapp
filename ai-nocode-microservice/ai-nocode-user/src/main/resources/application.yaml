@@ -31,7 +31,7 @@ springdoc:
   group-configs:
     - group: 'default'
       paths-to-match: '/**'
-      packages-to-scan: com.ai.nocodeapp.controller
+      packages-to-scan: com.ai.nocodeapp.user.controller
 # knife4j
 knife4j:
   enable: true

@@ -1,9 +1,11 @@
 package com.ai.nocodeapp;
 
+import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication()
+@EnableDubbo
 public class NocodeappScreenshotApplication {
     public static void main(String[] args) {
         SpringApplication.run(NocodeappScreenshotApplication.class, args);

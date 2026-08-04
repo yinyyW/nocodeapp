@@ -18,8 +18,6 @@ public interface InnerUserService {
 
     User getById(Serializable id);
 
-    UserVO getUserVO(User user);
-
     // 静态方法，避免跨服务调用
     static User getLoginUser(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
