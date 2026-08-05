@@ -11,20 +11,20 @@ const md = new MarkdownIt({
   html: true,
   linkify: true,
   typographer: true,
-  highlight(str: string, lang: string) {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return (
-          '<pre class="hljs"><code>' +
-          hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
-          '</code></pre>'
-        )
-      } catch {
-        // fallback
-      }
-    }
-    return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>'
-  },
+  // highlight(str: string, lang: string) {
+  //   if (lang && hljs.getLanguage(lang)) {
+  //     try {
+  //       return (
+  //         '<pre class="hljs"><code>' +
+  //         hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+  //         '</code></pre>'
+  //       )
+  //     } catch {
+  //       // fallback
+  //     }
+  //   }
+  //   return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>'
+  // },
 })
 
 const renderedHtml = computed(() => md.render(props.content))

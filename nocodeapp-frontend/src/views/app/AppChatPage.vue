@@ -24,7 +24,7 @@ import { listAppChatHistory } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { BASE_URL } from '@/common/network'
 import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
-import { error } from 'console'
+import hljs from 'highlight.js'
 
 type ChatMessage = {
   id: string
@@ -66,6 +66,7 @@ const editForm = reactive({
 
 const appId = computed(() => String(route.params.id || ''))
 const appName = computed(() => app.value?.appName || `应用 ${appId.value}`)
+const isAdmin = computed(() => loginStore?.loginUser?.userRole && loginStore?.loginUser?.userRole === 'admin')
 const previewUrl = computed(() => {
   if (!app.value?.codeGenType || !appId.value) {
     return ''
@@ -78,7 +79,6 @@ const previewUrl = computed(() => {
 
 const visualEditor = new VisualEditor({
   onElementSelected: (elementInfo) => {
-    console.log('elementSelected', elementInfo)
     selectedElement.value = elementInfo
   }
 })
@@ -133,11 +133,23 @@ const finishGenerate = async () => {
   message.success('网站生成完成')
 }
 
+const highlightCode = () => {
+  // setTimeout(() => {
+  //   const result = document.querySelectorAll('pre code')
+  //   result.forEach((block) => hljs.highlightElement(block as HTMLElement))
+  // }, 1000)
+  nextTick(() => {
+    document
+      .querySelectorAll('pre code')
+      .forEach((block) => hljs.highlightElement(block as HTMLElement))
+  })
+}
+
 const loadChatHistory = async (isLoadMore: boolean = false) => {
   loadingHistroy.value = isLoadMore
   const params: API.listAppChatHistoryParams = {
     appId: appId.value,
-    pageSize: 2
+    pageSize: 5
   }
   if (isLoadMore && lastCreateTime) {
     params.lastCreateTime = lastCreateTime.value
@@ -174,6 +186,7 @@ const loadChatHistory = async (isLoadMore: boolean = false) => {
       // 是否有更多的消息数据
       const totalRows = Number(res.data.data.totalRow) || chatHistories.length
       hasMoreHistory.value = totalRows > chatHistories.length
+      highlightCode()
     }
   } catch (e) {
     message.error((e as Error)?.message ?? '获取会话消息失败')
@@ -229,17 +242,28 @@ const sendMessage = async (content: string, auto = false) => {
   const source = new EventSource(url, { withCredentials: true })
   eventSourceRef.value = source
 
+  // 节流拼接AI输出，避免卡顿
+  let messageBuffer: string = ''
+  let timer: number | null = null
   source.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as { d?: string }
-      appendAssistantChunk(assistantId, data.d ?? '')
+      messageBuffer += (data.d ?? '')
     } catch {
-      appendAssistantChunk(assistantId, event.data)
+      messageBuffer += event.data
     }
+    if (timer) return
+    timer = window.setTimeout(() => {
+      appendAssistantChunk(assistantId, messageBuffer)
+      messageBuffer = ''
+      if (timer) clearTimeout(timer)
+      timer = null
+    }, 100)
   }
 
   source.addEventListener('done', () => {
     finishGenerate()
+    highlightCode()
   })
 
   source.addEventListener('business-error', (event: MessageEvent) => {
@@ -281,7 +305,10 @@ const loadAppAndAutoGenerate = async () => {
   }
   loading.value = true
   try {
-    await Promise.all([loadChatHistory(), refreshApp()])
+    await refreshApp()
+    if (isAdmin.value || isOwner.value) {
+      await loadChatHistory()
+    }
     if (app.value?.initPrompt && isOwner.value && !loadingHistroy.value && !messages.value?.length) {
       await sendMessage(app.value?.initPrompt, true)
     } else if (app.value?.codeGenType) {
@@ -485,8 +512,8 @@ onBeforeUnmount(() => {
       </a-space>
     </header>
 
-    <main class="workspace-body">
-      <section class="chat-panel">
+    <main :class="[isOwner || isAdmin ? 'workspace-body' : 'preview-panel-only']">
+      <section v-if="isOwner || loginStore?.loginUser?.userRole === 'admin'" class="chat-panel">
         <div ref="messagesBodyRef" class="messages-body">
           <div v-if="hasMoreHistory" class="messages-load-more-container">
             <div class="load-more-divider">
@@ -498,7 +525,8 @@ onBeforeUnmount(() => {
             <a-spin v-else :spinning="loadingHistroy" size="small" />
           </div>
           <a-spin :spinning="loading">
-            <a-empty v-if="!messages.length" description="应用加载后会自动发送初始提示词" />
+            <a-empty v-if="(isOwner || loginStore?.loginUser?.userRole === 'admin') && !messages.length"
+              description="应用加载后会自动发送初始提示词" />
             <div v-for="item in messages" :key="item.id" class="message-row"
               :class="item.role === 'user' ? 'message-row-user' : 'message-row-ai'">
               <a-avatar v-if="item.role === 'assistant'" class="message-avatar">
@@ -712,6 +740,15 @@ onBeforeUnmount(() => {
 .title-text span {
   color: #64748b;
   font-size: 12px;
+}
+
+.preview-panel-only {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-panel-only .preview-panel {
+  height: 100%;
 }
 
 .workspace-body {
